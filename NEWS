@@ -23,6 +23,9 @@ USE AT YOUR OWN RISK.  NOT RECOMMENDED FOR PRODUCTION USE!
 * libnm: retire deprecated WiMAX API NMDeviceWimax and NMWimaxNsp.
   WiMAX support was removed from NetworkManager in version 1.2 (2016) and no such
   type instances would have been created by NMClient for a while now.
+* libnm: heavily internal rework NMClient. This slims down libnm and makes the
+  implementation more efficient. NMClient should work now well with a separate
+  GMainContext.
 
 =============================================
 NetworkManager-1.20
