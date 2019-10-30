@@ -180,8 +180,8 @@ test_device_added_signal_after_init (void)
 	g_signal_handlers_disconnect_by_func (client, device_sai_added_cb, &result);
 	g_signal_handlers_disconnect_by_func (client, devices_sai_notify_cb, &result);
 
-	g_assert ((result & SIGNAL_MASK) == SIGNAL_FIRST);
-	g_assert ((result & NOTIFY_MASK) == NOTIFY_SECOND);
+	g_assert ((result & SIGNAL_MASK) == SIGNAL_SECOND);
+	g_assert ((result & NOTIFY_MASK) == NOTIFY_FIRST);
 
 	devices = nm_client_get_devices (client);
 	g_assert (devices);
@@ -635,13 +635,15 @@ assert_ac_and_device (NMClient *client)
 	device = devices->pdata[0];
 	if (device != ac_device && devices->len > 1)
 		device = devices->pdata[1];
-	device_ac = nm_device_get_active_connection (device);
-	g_assert (device_ac != NULL);
 
 	g_assert_cmpstr (nm_object_get_path (NM_OBJECT (device)), ==, nm_object_get_path (NM_OBJECT (ac_device)));
 	g_assert (device == ac_device);
-	g_assert_cmpstr (nm_object_get_path (NM_OBJECT (ac)), ==, nm_object_get_path (NM_OBJECT (device_ac)));
-	g_assert (ac == device_ac);
+
+	device_ac = nm_device_get_active_connection (device);
+	if (device_ac) {
+		g_assert_cmpstr (nm_object_get_path (NM_OBJECT (ac)), ==, nm_object_get_path (NM_OBJECT (device_ac)));
+		g_assert (ac == device_ac);
+	}
 }
 
 static void
