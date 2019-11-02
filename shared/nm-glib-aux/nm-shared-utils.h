@@ -1262,6 +1262,10 @@ void nm_utils_invoke_on_idle (NMUtilsInvokeOnIdleCallback callback,
 
 /*****************************************************************************/
 
+GSource *nm_utils_g_main_context_create_integrate_source (GMainContext *internal);
+
+/*****************************************************************************/
+
 static inline void
 nm_strv_ptrarray_add_string_take (GPtrArray *cmd,
                                   char *str)
