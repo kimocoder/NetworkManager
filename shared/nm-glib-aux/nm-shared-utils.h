@@ -931,6 +931,9 @@ NM_AUTO_DEFINE_FCN0 (GSource *, _nm_auto_destroy_and_unref_gsource, nm_g_source_
 NM_AUTO_DEFINE_FCN0 (GMainContext *, _nm_auto_pop_gmaincontext, g_main_context_pop_thread_default)
 #define nm_auto_pop_gmaincontext nm_auto (_nm_auto_pop_gmaincontext)
 
+NM_AUTO_DEFINE_FCN0 (GMainContext *, _nm_auto_unref_gmaincontext, g_main_context_unref)
+#define nm_auto_unref_gmaincontext nm_auto (_nm_auto_unref_gmaincontext)
+
 static inline GMainContext *
 nm_g_main_context_push_thread_default (GMainContext *context)
 {
