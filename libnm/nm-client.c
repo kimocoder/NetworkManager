@@ -2253,13 +2253,20 @@ _obj_notify_update (NMClient *self,
 			GType gtype = G_TYPE_NONE;
 			NMLDBusMetaInteracePrio curr_prio = NML_DBUS_META_INTERFACE_PRIO_INSTANTIATE_LOW - 1;
 
+			NML_NMCLIENT_LOG_T (self, "[%s] >>> register type...", dbobj->dbus_path->str);
+
 			c_list_for_each_entry (db_iface_data, &dbobj->iface_lst_head, iface_lst) {
 				if (!db_iface_data->dbus_iface_is_wellknown)
 					break;
-				if (db_iface_data->dbus_iface.meta->interface_prio <= curr_prio)
+				if (db_iface_data->dbus_iface.meta->interface_prio <= curr_prio) {
+					NML_NMCLIENT_LOG_T (self, "[%s] >>> register type: skip iface %s due to lower prio %d vs. %d",
+					                    dbobj->dbus_path->str, db_iface_data->dbus_iface.meta->dbus_iface_name, (int) db_iface_data->dbus_iface.meta->interface_prio, (int) curr_prio);
 					continue;
+				}
 				curr_prio = db_iface_data->dbus_iface.meta->interface_prio;
 				gtype = db_iface_data->dbus_iface.meta->get_type_fcn ();
+				NML_NMCLIENT_LOG_T (self, "[%s] >>> register type: select iface %s (%s), %d over %d",
+				                    dbobj->dbus_path->str, db_iface_data->dbus_iface.meta->dbus_iface_name, g_type_name (gtype), (int) db_iface_data->dbus_iface.meta->interface_prio, (int) curr_prio);
 				break;
 			}
 			if (gtype != G_TYPE_NONE) {
