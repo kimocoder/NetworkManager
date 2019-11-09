@@ -636,7 +636,7 @@ NM_G_ERROR_MSG (GError *error)
 #endif
 
 #if _NM_CC_SUPPORT_GENERIC
-#define NM_STRUCT_OFFSET_ENSURE_TYPE(type, container, field) (_Generic ((((container *) NULL)->field), \
+#define NM_STRUCT_OFFSET_ENSURE_TYPE(type, container, field) (_Generic ( *(&(((container *) NULL)->field) + 0) , \
                                                                         type: G_STRUCT_OFFSET (container, field)))
 #else
 #define NM_STRUCT_OFFSET_ENSURE_TYPE(type, container, field) G_STRUCT_OFFSET (container, field)
