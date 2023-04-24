@@ -48,7 +48,7 @@ def list_uuids():
         iface = dbus.Interface(proxy, dbus_interface='org.freedesktop.NetworkManager.Settings.Connection')
         settings = iface.GetSettings()
         conn = settings['connection']
-        print("%s - %s (%s)" % (conn['uuid'], conn['id'], conn['type']))
+        print(f"{conn['uuid']} - {conn['id']} ({conn['type']})")
 
 
 def get_active_connection_path(uuid):

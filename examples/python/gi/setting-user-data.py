@@ -91,7 +91,7 @@ def parse_args():
     return args
 
 def connection_to_str(connection):
-    return '%s (%s)' % (connection.get_id(), connection.get_uuid())
+    return f'{connection.get_id()} ({connection.get_uuid()})'
 
 def connections_filter(connections, filter_data):
     connections = list(sorted(connections, key=connection_to_str))
@@ -103,14 +103,10 @@ def connections_filter(connections, filter_data):
     l = []
     for f in filter_data:
         if f[0] == 'id':
-            for c in connections:
-                if f[1] == c.get_id():
-                    l.append(c)
+            l.extend(c for c in connections if f[1] == c.get_id())
         else:
             assert(f[0] == 'uuid')
-            for c in connections:
-                if f[1] == c.get_uuid():
-                    l.append(c)
+            l.extend(c for c in connections if f[1] == c.get_uuid())
     return l
 
 def print_user_data(connection, data_allow_regex, data, prefix=''):
@@ -130,25 +126,23 @@ def print_user_data(connection, data_allow_regex, data, prefix=''):
                     keys.append (d)
         else:
             keys.extend(all_keys)
-        n = '%s' % (keys_len)
+        n = f'{keys_len}'
 
-    print('%s%s [%s]' % (prefix, connection_to_str(connection), n))
-    dd = { }
-    if s_u is not None:
-        dd = s_u.get_property(NM.SETTING_USER_DATA)
+    print(f'{prefix}{connection_to_str(connection)} [{n}]')
+    dd = s_u.get_property(NM.SETTING_USER_DATA) if s_u is not None else { }
     for k in keys:
         if s_u is not None:
             v = s_u.get_data(k)
             if v is None:
                 if k in dd:
-                    print('%s   INVALID:   "%s" = "%s"' % (prefix, k, dd[k]))
+                    print(f'{prefix}   INVALID:   "{k}" = "{dd[k]}"')
                 else:
-                    print('%s   MISSING:   "%s"' % (prefix, k))
+                    print(f'{prefix}   MISSING:   "{k}"')
             else:
                 assert(v == dd.get(k, None))
-                print('%s   SET:       "%s" = "%s"' % (prefix, k, v))
+                print(f'{prefix}   SET:       "{k}" = "{v}"')
         else:
-            print('%s   MISSING:  "%s"' % (prefix, k))
+            print(f'{prefix}   MISSING:  "{k}"')
 
 
 def do_get(connections, data):
@@ -177,9 +171,9 @@ def do_set(connection, data, set_gobject):
         key = d[0]
         val = d[1]
         if val is None:
-            print(' DEL: "%s"' % (key))
+            print(f' DEL: "{key}"')
         else:
-            print(' SET: "%s" = "%s"' % (key, val))
+            print(f' SET: "{key}" = "{val}"')
         if set_gobject:
             d = s_u.get_property(NM.SETTING_USER_DATA)
             if val is None:
@@ -192,16 +186,16 @@ def do_set(connection, data, set_gobject):
                 s_u.set_data(key, val)
             except Exception as e:
                 if val is None:
-                    print('error deleting key "%s": %s' % (key, e))
+                    print(f'error deleting key "{key}": {e}')
                 else:
-                    print('error setting key "%s" = "%s": %s' % (key, val, e))
+                    print(f'error setting key "{key}" = "{val}": {e}')
                 sys.exit(1)
 
 
     try:
         connection.commit_changes(True, None)
     except Exception as e:
-        print('failure to commit connection: %s' % (e))
+        print(f'failure to commit connection: {e}')
         sys.exit(1)
 
     print('')
@@ -222,8 +216,9 @@ if __name__ == '__main__':
             print('Requires one or more arguments to set or delete')
             sys.exit(1)
         if len(connections) != 1:
-            print('To set the user-data of a connection, exactly one connection must be selected via id|uuid. Instead, %s connection matched ([%s])' %
-                  (len(connections), ', '.join([connection_to_str(c) for c in connections])))
+            print(
+                f"To set the user-data of a connection, exactly one connection must be selected via id|uuid. Instead, {len(connections)} connection matched ([{', '.join([connection_to_str(c) for c in connections])}])"
+            )
             sys.exit(1)
         do_set(connections[0], args['data'], args['set-gobject'])
     else:

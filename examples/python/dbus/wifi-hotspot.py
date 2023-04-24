@@ -42,7 +42,7 @@ con = dbus.Dictionary({
      })
 
 def usage():
-    print("Usage: %s <ifname> [up|down]" % sys.argv[0])
+    print(f"Usage: {sys.argv[0]} <ifname> [up|down]")
     sys.exit(0)
 
 bus = dbus.SystemBus()
@@ -76,7 +76,9 @@ if not connection_path:
 proxy = bus.get_object(service_name, devpath)
 device = dbus.Interface(proxy, "org.freedesktop.NetworkManager.Device")
 operation = sys.argv[2]
-if operation == "up":
+if operation == "down":
+    device.Disconnect()
+elif operation == "up":
     acpath = nm.ActivateConnection(connection_path, devpath, "/")
     proxy = bus.get_object(service_name, acpath)
     active_props = dbus.Interface(proxy, "org.freedesktop.DBus.Properties")
@@ -90,8 +92,6 @@ if operation == "up":
             sys.exit(0)
         time.sleep(1)
     print("Failed to start access point")
-elif operation == "down":
-    device.Disconnect()
 else:
     usage()
 

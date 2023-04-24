@@ -15,7 +15,7 @@ import os
 ###############################################################################
 
 def usage():
-    print("Usage: %s [COMMAND [ARG]...]" % sys.argv[0])
+    print(f"Usage: {sys.argv[0]} [COMMAND [ARG]...]")
     print("")
     print(" COMMANDS:  [show]")
     print("            create TIMEOUT [--destroy-all|--delete-new-connections|--disconnect-new-devices|--allow-overlapping|DEV]...")
@@ -28,19 +28,31 @@ def usage():
 def show(c, ts = None):
     cr = c.get_created()
     rt = c.get_rollback_timeout()
-    print("%s:" % c.get_path())
-    print("  created: %u%s" % (cr, "" if ts is None else (" (%s sec ago)" % ((ts - cr) / 1000.0))))
+    print(f"{c.get_path()}:")
+    print(
+        "  created: %u%s"
+        % (cr, "" if ts is None else f" ({(ts - cr) / 1000.0} sec ago)")
+    )
     if rt == 0:
         print("  timeout: infinity")
     else:
-        print("  timeout: %u seconds%s" % (rt, "" if ts is None else (" (circa %s sec left)" % ((cr + (rt * 1000) - ts) / 1000.0))))
-    print("  devices: %s" % (' '.join(sorted(map(lambda x: x.get_iface(), c.get_devices())))))
+        print(
+            "  timeout: %u seconds%s"
+            % (
+                rt,
+                ""
+                if ts is None
+                else f" (circa {(cr + rt * 1000 - ts) / 1000.0} sec left)",
+            )
+        )
+    print(
+        f"  devices: {' '.join(sorted(map(lambda x: x.get_iface(), c.get_devices())))}"
+    )
 
 def find_checkpoint(client, path):
-    for c in client.get_checkpoints():
-        if c.get_path() == path:
-            return c
-    return None
+    return next(
+        (c for c in client.get_checkpoints() if c.get_path() == path), None
+    )
 
 def validate_path(path, client):
     try:
@@ -55,7 +67,7 @@ def validate_path(path, client):
     if client is not None:
         checkpoint = find_checkpoint(client, path)
         if checkpoint is None:
-            print('WARNING: no checkpoint with path "%s" found' % (path))
+            print(f'WARNING: no checkpoint with path "{path}" found')
 
     return path
 
@@ -78,13 +90,13 @@ def do_create(client):
         else:
             d = client.get_device_by_iface(arg)
             if d is None:
-                sys.exit("Unknown device %s" % arg)
+                sys.exit(f"Unknown device {arg}")
             devices.append(d)
 
     def create_cb(client, result, data):
         try:
             checkpoint = client.checkpoint_create_finish(result)
-            print("%s" % checkpoint.get_path())
+            print(f"{checkpoint.get_path()}")
         except Exception as e:
             sys.stderr.write("Failed: %s\n" % e.message)
         main_loop.quit()
@@ -118,11 +130,8 @@ def do_rollback(client):
             res = client.checkpoint_rollback_finish(result)
             for path in res:
                 d = client.get_device_by_path(path)
-                if d is None:
-                    iface = path
-                else:
-                    iface = d.get_iface()
-                print("%s => %s" % (iface, "OK" if res[path] == 0 else "ERROR"))
+                iface = path if d is None else d.get_iface()
+                print(f'{iface} => {"OK" if res[path] == 0 else "ERROR"}')
         except Exception as e:
             sys.stderr.write("Failed: %s\n" % e.message)
         main_loop.quit()

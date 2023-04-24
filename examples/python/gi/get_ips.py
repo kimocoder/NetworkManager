@@ -93,14 +93,14 @@ def show_dns(dev, family):
 
 if __name__ == "__main__":
     if len(sys.argv) != 2:
-        sys.exit('Usage: %s <interface>' % sys.argv[0])
+        sys.exit(f'Usage: {sys.argv[0]} <interface>')
     dev_iface = sys.argv[1]
 
     c = NM.Client.new(None)
     dev = c.get_device_by_iface(dev_iface)
     if dev is None:
         sys.exit('Device \'%s\' not found' % dev_iface)
-    print("Device: %s - %s" % (dev_iface, dev.get_device_type().value_name))
+    print(f"Device: {dev_iface} - {dev.get_device_type().value_name}")
     print("---------------------------------------")
 
     print("IPv4 addresses:")

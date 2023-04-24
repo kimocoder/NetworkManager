@@ -82,18 +82,19 @@ def connection_is_wireguard(conn):
 
 def connection_to_str(conn):
     if connection_is_wireguard(conn):
-        iface = conn.get_setting(NM.SettingConnection).get_interface_name()
-        if iface:
-            extra = ', interface: "%s"' % (iface)
+        if iface := conn.get_setting(
+            NM.SettingConnection
+        ).get_interface_name():
+            extra = f', interface: "{iface}"'
         else:
             extra = ''
     else:
-        extra = ', type: %s' % (conn.get_setting(NM.SettingConnection).get_connection_type())
+        extra = f', type: {conn.get_setting(NM.SettingConnection).get_connection_type()}'
 
-    return '"%s" (%s%s)' % (conn.get_id(), conn.get_uuid(), extra)
+    return f'"{conn.get_id()}" ({conn.get_uuid()}{extra})'
 
 def connections_wg(connections):
-    l = list([c for c in connections if connection_is_wireguard(c)])
+    l = [c for c in connections if connection_is_wireguard(c)]
     l.sort(key = connection_to_str)
     return l
 
@@ -102,21 +103,17 @@ def connections_find(connections, con_spec, con_id):
     l = []
     if con_spec in [None, 'id']:
         for c in connections:
-            if con_id == c.get_id():
-                if c not in l:
-                    l.append(c)
+            if con_id == c.get_id() and c not in l:
+                l.append(c)
     if con_spec in [None, 'interface']:
         for c in connections:
             s_con = c.get_setting(NM.SettingConnection)
-            if     s_con \
-               and con_id == s_con.get_interface_name():
-                if c not in l:
-                    l.append(c)
+            if s_con and con_id == s_con.get_interface_name() and c not in l:
+                l.append(c)
     if con_spec in [None, 'uuid']:
         for c in connections:
-            if con_id == c.get_uuid():
-                if c not in l:
-                    l.append(c)
+            if con_id == c.get_uuid() and c not in l:
+                l.append(c)
     l.sort(key = connection_to_str)
     return l
 
@@ -124,11 +121,10 @@ def connections_find(connections, con_spec, con_id):
 def print_hint(nm_client):
     print('Maybe you want to create a profile first with')
     print('  nmcli connection add type wireguard ifname wg0 $MORE_ARGS')
-    connections = connections_wg(nm_client.get_connections())
-    if connections:
+    if connections := connections_wg(nm_client.get_connections()):
         print('Or edit one of the following WireGuard profiles:')
         for c in connections:
-            print ('  - %s' % (connection_to_str(c)))
+            print(f'  - {connection_to_str(c)}')
 
 ###############################################################################
 
@@ -140,7 +136,7 @@ def argv_get_one(argv, idx, type_ctor=None, topic=None):
         except MyError as e:
             if isinstance(topic, (int, long)):
                 topic = argv[topic]
-            raise MyError('error for "%s": %s' % (topic, e.message))
+            raise MyError(f'error for "{topic}": {e.message}')
         return v
 
     v = None
@@ -152,7 +148,7 @@ def argv_get_one(argv, idx, type_ctor=None, topic=None):
         try:
             v = type_ctor(v)
         except Exception as e:
-            raise MyError('invalid argument "%s" (%s)' % (v, e.message))
+            raise MyError(f'invalid argument "{v}" ({e.message})')
     return v
 
 ###############################################################################
@@ -166,11 +162,9 @@ def arg_parse_secret_flags(arg):
             'not-required': NM.SettingSecretFlags.NOT_REQUIRED,
             'agent-owned':  NM.SettingSecretFlags.AGENT_OWNED,
         }.get(f)
-        if n is not None:
-            return n
-        return NM.SettingSecretFlags(int(f))
+        return n if n is not None else NM.SettingSecretFlags(int(f))
     except Exception as e:
-        raise MyError('invalid secret flags "%s"' % (arg))
+        raise MyError(f'invalid secret flags "{arg}"')
 
 def _arg_parse_int(arg, vmin, vmax, key, base = 0):
     try:
@@ -178,8 +172,8 @@ def _arg_parse_int(arg, vmin, vmax, key, base = 0):
         if v >= vmin and vmax <= 0xFFFFFFFF:
             return v
     except:
-        raise MyError('invalid %s "%s"' % (key, arg))
-    raise MyError("%s out of range" % (key))
+        raise MyError(f'invalid {key} "{arg}"')
+    raise MyError(f"{key} out of range")
 
 def arg_parse_listen_port(arg):
     return _arg_parse_int(arg, 0, 0xFFFF, "listen-port")
@@ -198,7 +192,7 @@ def arg_parse_allowed_ips(arg):
     peer = NM.WireGuardPeer()
     for aip in l:
         if not peer.append_allowed_ip(aip, False):
-            raise MyError('invalid allowed-ip "%s"' % (aip))
+            raise MyError(f'invalid allowed-ip "{aip}"')
     return l
 
 ###############################################################################
@@ -211,25 +205,19 @@ def secret_flags_to_string(flags):
             NM.SettingSecretFlags.AGENT_OWNED:  'agent-owned',
         }.get(flags)
     num = str(int(flags))
-    if nick is None:
-        return num
-    return '%s (%s)' % (num, nick)
+    return num if nick is None else f'{num} ({nick})'
 
 def secret_to_string(secret):
     if os.environ.get('WG_HIDE_KEYS', '') != 'never':
         return '(hidden)'
-    if not secret:
-        return ''
-    return secret
+    return secret if secret else ''
 
 def val_to_str(val):
     if val == NM.Ternary.DEFAULT:
         return 'default'
     if val == NM.Ternary.TRUE:
         return 'true'
-    if val == NM.Ternary.FALSE:
-        return 'false'
-    return repr(val)
+    return 'false' if val == NM.Ternary.FALSE else repr(val)
 
 ###############################################################################
 
@@ -243,16 +231,16 @@ def wg_read_private_key(privkey_file):
             raise Exception("not 32 bytes base64 encoded")
         return base64.encodestring(bdata).strip()
     except Exception as e:
-        raise MyError('failed to read private key "%s": %s' % (privkey_file, e.message))
+        raise MyError(f'failed to read private key "{privkey_file}": {e.message}')
 
 def wg_peer_is_valid(peer, msg = None):
     try:
         peer.is_valid(True, True)
     except gi.repository.GLib.Error as e:
         if msg is None:
-            raise MyError('%s' % (e.message))
+            raise MyError(f'{e.message}')
         else:
-            raise MyError('%s' % (msg))
+            raise MyError(f'{msg}')
 
 ###############################################################################
 
@@ -263,16 +251,24 @@ def do_get(nm_client, connection):
     # Fetching secrets is not implemented. For now show them all as
     # <hidden>.
 
-    print('interface:                    %s' % (s_con.get_interface_name()))
-    print('uuid:                         %s' % (conn.get_uuid()))
-    print('id:                           %s' % (conn.get_id()))
-    print('private-key:                  %s' % (secret_to_string(s_wg.get_private_key())))
-    print('private-key-flags:            %s' % (secret_flags_to_string(s_wg.get_private_key_flags())))
-    print('listen-port:                  %s' % (s_wg.get_listen_port()))
+    print(f'interface:                    {s_con.get_interface_name()}')
+    print(f'uuid:                         {conn.get_uuid()}')
+    print(f'id:                           {conn.get_id()}')
+    print(
+        f'private-key:                  {secret_to_string(s_wg.get_private_key())}'
+    )
+    print(
+        f'private-key-flags:            {secret_flags_to_string(s_wg.get_private_key_flags())}'
+    )
+    print(f'listen-port:                  {s_wg.get_listen_port()}')
     print('fwmark:                       0x%x' % (s_wg.get_fwmark()))
-    print('peer-routes:                  %s' % (val_to_str(s_wg.get_peer_routes())))
-    print('ip4-auto-default-route:       %s' % (val_to_str(s_wg.get_ip4_auto_default_route())))
-    print('ip6-auto-default-route:       %s' % (val_to_str(s_wg.get_ip6_auto_default_route())))
+    print(f'peer-routes:                  {val_to_str(s_wg.get_peer_routes())}')
+    print(
+        f'ip4-auto-default-route:       {val_to_str(s_wg.get_ip4_auto_default_route())}'
+    )
+    print(
+        f'ip6-auto-default-route:       {val_to_str(s_wg.get_ip6_auto_default_route())}'
+    )
     for i in range(s_wg.get_peers_len()):
         peer = s_wg.get_peer(i)
         print('peer[%d].public-key:           %s' % (i, peer.get_public_key()))
@@ -344,7 +340,7 @@ def do_set(nm_client, conn, argv):
                     peer_idx = None
                     peer = NM.WireGuardPeer()
                     peer.set_public_key(public_key, True)
-                    wg_peer_is_valid(peer, 'public key "%s" is invalid' % (public_key))
+                    wg_peer_is_valid(peer, f'public key "{public_key}" is invalid')
                 peer_remove = False
                 idx += 2
                 continue
@@ -385,15 +381,15 @@ def do_set(nm_client, conn, argv):
                 idx += 2
                 continue
 
-            raise MyError('invalid argument "%s"' % (argv[idx]))
+            raise MyError(f'invalid argument "{argv[idx]}"')
     except MyError as e:
-        print('Error: %s' % (e.message))
+        print(f'Error: {e.message}')
         sys.exit(1)
 
     try:
         conn.commit_changes(True, None)
     except Exception as e:
-        print('failure to commit connection: %s' % (e))
+        print(f'failure to commit connection: {e}')
         sys.exit(1)
 
     print('Success')
@@ -409,10 +405,9 @@ if __name__ == '__main__':
     del argv[0]
 
     con_spec = None
-    if len(argv) >= 1:
-        if argv[0] in [ 'id', 'uuid', 'interface' ]:
-            con_spec = argv[0]
-            del argv[0]
+    if len(argv) >= 1 and argv[0] in ['id', 'uuid', 'interface']:
+        con_spec = argv[0]
+        del argv[0]
 
     if len(argv) < 1:
         print('Requires an existing NetworkManager connection profile as first argument')
@@ -424,24 +419,33 @@ if __name__ == '__main__':
 
     connections = connections_find(nm_client.get_connections(), con_spec, con_id)
     if len(connections) == 0:
-        print('No matching connection %s\"%s\" found.' % ((con_spec+' ' if con_spec else ''), con_id))
+        print(
+            'No matching connection %s\"%s\" found.'
+            % (f'{con_spec} ' if con_spec else '', con_id)
+        )
         print_hint(nm_client)
         sys.exit(1)
     if len(connections) > 1:
-        print("Connection %s\"%s\" is not unique (%s)" % ((con_spec+' ' if con_spec else ''), con_id, ', '.join(['['+connection_to_str(c)+']' for c in connections])))
+        print(
+            "Connection %s\"%s\" is not unique (%s)"
+            % (
+                f'{con_spec} ' if con_spec else '',
+                con_id,
+                ', '.join([f'[{connection_to_str(c)}]' for c in connections]),
+            )
+        )
         if not con_spec:
             print('Maybe qualify the name with [id|uuid|interface]?')
         sys.exit(1)
 
     conn = connections[0]
     if not connection_is_wireguard(conn):
-        print('Connection %s is not a WireGuard profile' % (connection_to_str(conn)))
+        print(f'Connection {connection_to_str(conn)} is not a WireGuard profile')
         print('See available profiles with `nmcli connection show`')
         sys.exit(1)
 
     try:
-        secrets = conn.get_secrets(NM.SETTING_WIREGUARD_SETTING_NAME)
-        if secrets:
+        if secrets := conn.get_secrets(NM.SETTING_WIREGUARD_SETTING_NAME):
             conn.update_secrets(NM.SETTING_WIREGUARD_SETTING_NAME, secrets)
     except:
         pass

@@ -19,10 +19,10 @@ from gi.repository import GLib, NM
 main_loop = None
 
 def do_notify(self, property):
-    print("notify: %s" % property)
+    print(f"notify: {property}")
     ip4cfg = self.get_ip4_config()
     if ip4cfg is not None:
-        print("ip4-config: %s" % ip4cfg.get_path())
+        print(f"ip4-config: {ip4cfg.get_path()}")
         main_loop.quit()
 
 def state_changed(obj, arg1, arg2, arg3):
@@ -34,14 +34,14 @@ def state_changed(obj, arg1, arg2, arg3):
 
 if __name__ == "__main__":
     if len(sys.argv) != 2:
-        sys.exit('Usage: %s <interface>' % sys.argv[0])
+        sys.exit(f'Usage: {sys.argv[0]} <interface>')
     dev_iface = sys.argv[1]
 
     c = NM.Client.new(None)
     dev = c.get_device_by_iface(dev_iface)
     if dev is None:
         sys.exit('Device \'%s\' not found' % dev_iface)
-    print("Device: %s - %s" % (dev_iface, dev.get_device_type().value_name))
+    print(f"Device: {dev_iface} - {dev.get_device_type().value_name}")
     print("---------------------------------------")
 
     dev.connect('state-changed', state_changed)

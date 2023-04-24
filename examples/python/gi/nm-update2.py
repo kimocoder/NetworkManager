@@ -24,7 +24,7 @@ def find_connection_first(nm_client, arg_type, arg_id):
 
 def con_to_str(con):
     s_con = con.get_setting_connection()
-    return '"%s" (%s)' % (s_con.get_id(), s_con.get_uuid())
+    return f'"{s_con.get_id()}" ({s_con.get_uuid()})'
 
 def usage():
     arg0 = sys.argv[0]
@@ -61,12 +61,12 @@ def main():
             if cons:
                 die('cannot specify multiple connections')
             if len(argv) < 2:
-                die('missing argument for "%s" specifier' % (argv[0]))
+                die(f'missing argument for "{argv[0]}" specifier')
             cons.extend(find_connections(nm_client, argv[0], argv[1]))
-            if len(cons) == 0:
-                die('could not find connection for "%s %s"' % (argv[0], argv[1]))
+            if not cons:
+                die(f'could not find connection for "{argv[0]} {argv[1]}"')
             if len(cons) != 1:
-                die('could not find unique connection for "%s %s"' % (argv[0], argv[1]))
+                die(f'could not find unique connection for "{argv[0]} {argv[1]}"')
             argv = argv[2:]
             continue
         if argv[0] in ['--block-autoconnect']:
@@ -95,17 +95,17 @@ def main():
             else:
                 assert(False)
             if arg_mode is not None:
-                die('duplicate storage modes ("%s")' % (argv[0]))
+                die(f'duplicate storage modes ("{argv[0]}")')
             arg_mode = v
             argv = argv[1:]
             continue
         if cons:
-            die('unknown argument "%s"' % (argv[0]))
+            die(f'unknown argument "{argv[0]}"')
         cons.extend(find_connections(nm_client, None, argv[0]))
-        if len(cons) == 0:
-           die('could not find connection for "%s"' % (argv[0]))
+        if not cons:
+            die(f'could not find connection for "{argv[0]}"')
         if len(cons) != 1:
-           die('could not find unique connection for "%s"' % (argv[0]))
+            die(f'could not find unique connection for "{argv[0]}"')
         argv = argv[1:]
         continue
 
@@ -139,9 +139,13 @@ def main():
     main_loop.run()
 
     if 'error' in result:
-        die('update connection %s failed [%s]: %s' % (con_to_str(con2), ' '.join(sys.argv), result['error']))
+        die(
+            f"update connection {con_to_str(con2)} failed [{' '.join(sys.argv)}]: {result['error']}"
+        )
 
-    print('update connection %s succeeded [%s]: %s' % (con_to_str(con2), ' '.join(sys.argv), result['result']))
+    print(
+        f"update connection {con_to_str(con2)} succeeded [{' '.join(sys.argv)}]: {result['result']}"
+    )
 
 if __name__ == '__main__':
     main()

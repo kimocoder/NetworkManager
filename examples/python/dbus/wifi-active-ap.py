@@ -19,7 +19,7 @@ proxy = bus.get_object(service_name, "/org/freedesktop/NetworkManager/Settings")
 settings = dbus.Interface(proxy, "org.freedesktop.NetworkManager.Settings")
 
 if len(sys.argv) != 2:
-    print("Usage: %s <ifname>" % sys.argv[0])
+    print(f"Usage: {sys.argv[0]} <ifname>")
     sys.exit(0)
 
 # Get the device object path based on interface name
@@ -33,7 +33,7 @@ proxy = bus.get_object(service_name, devpath)
 props = dbus.Interface(proxy, "org.freedesktop.DBus.Properties")
 active_ap_path = props.Get("org.freedesktop.NetworkManager.Device.Wireless", "ActiveAccessPoint")
 if active_ap_path == "/":
-    print("%s is not currently associated" % sys.argv[1])
+    print(f"{sys.argv[1]} is not currently associated")
     sys.exit(0)
 
 # Get the active access point's SSID and BSSID
@@ -47,7 +47,7 @@ ssid = ""
 for c in raw_ssid:
     ssid = ssid + chr(c)
 
-print("%s is associated to '%s' (%s)" % (sys.argv[1], ssid, bssid))
+print(f"{sys.argv[1]} is associated to '{ssid}' ({bssid})")
 
 sys.exit(0)
 

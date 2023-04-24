@@ -57,8 +57,8 @@ if __name__ == "__main__":
 
     # deactivate the connections
     for ac in connections:
-        if ctype == None or ctype == ac.get_connection_type():
-            sys.stdout.write("Deactivating %s (%s)" % (ac.get_id(), ac.get_uuid()))
+        if ctype is None or ctype == ac.get_connection_type():
+            sys.stdout.write(f"Deactivating {ac.get_id()} ({ac.get_uuid()})")
             try:
                 client.deactivate_connection(ac, None)
                 sys.stdout.write("\033[32m  -> succeeded\033[0m\n")

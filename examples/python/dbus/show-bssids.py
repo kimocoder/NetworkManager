@@ -51,12 +51,12 @@ for d in devices:
             bssid = ap_prop_iface.Get("org.freedesktop.NetworkManager.AccessPoint", "HwAddress")
 
             # Cache the BSSID
-            if not bssid in all_aps:
+            if bssid not in all_aps:
                 all_aps.append(bssid)
 
             # Print the current AP's BSSID
             if path == connected_path:
-                print("%s (%s)" % (bssid, iface))
+                print(f"{bssid} ({iface})")
 
 # and print out all APs the wifi devices can see
 print("\nFound APs:")

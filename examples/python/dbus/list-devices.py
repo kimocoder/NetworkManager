@@ -57,18 +57,18 @@ for d in devices:
     props = prop_iface.GetAll("org.freedesktop.NetworkManager.Device")
     print("============================")
 
-    print("Interface: %s" % props['Interface'])
+    print(f"Interface: {props['Interface']}")
     try:
         devtype = devtypes[props['DeviceType']]
     except KeyError:
         devtype = "Unknown"
-    print("Type: %s" % devtype)
+    print(f"Type: {devtype}")
 
-    print("Driver: %s" % props['Driver'])
+    print(f"Driver: {props['Driver']}")
 
     try:
         state = states[props['State']]
     except KeyError:
         state = "Unknown"
-    print("State: %s" % state)
+    print(f"State: {state}")
 

@@ -11,7 +11,7 @@ import dbus, sys
 # connection it may have
 
 if len(sys.argv) != 2:
-    raise Exception("Usage: %s <interface>" % sys.argv[0])
+    raise Exception(f"Usage: {sys.argv[0]} <interface>")
 
 bus = dbus.SystemBus()
 
@@ -32,7 +32,7 @@ for d in devices:
         break
 
 if not dpath or not len(dpath):
-    raise Exception("NetworkManager knows nothing about %s" % sys.argv[1])
+    raise Exception(f"NetworkManager knows nothing about {sys.argv[1]}")
 
 dev_proxy = bus.get_object("org.freedesktop.NetworkManager", dpath)
 dev_iface = dbus.Interface(dev_proxy, "org.freedesktop.NetworkManager.Device")
@@ -41,7 +41,7 @@ prop_iface = dbus.Interface(dev_proxy, "org.freedesktop.DBus.Properties")
 # Make sure the device is connected before we try to disconnect it
 state = prop_iface.Get("org.freedesktop.NetworkManager.Device", "State")
 if state <= 3:
-    raise Exception("Device %s isn't connected" % sys.argv[1])
+    raise Exception(f"Device {sys.argv[1]} isn't connected")
 
 # Tell NM to disconnect it
 dev_iface.Disconnect()

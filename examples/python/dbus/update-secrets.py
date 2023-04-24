@@ -24,12 +24,12 @@ def change_secrets_in_one_setting(proxy, config, setting_name):
         # returns a dict of dicts mapping name::setting, where setting is a dict
         # mapping key::value.  Each member of the 'setting' dict is a secret
         secrets = proxy.GetSecrets(setting_name)
-        print("Current secrets:" + secrets)
+        print(f"Current secrets:{secrets}")
 
         # Ask user for new secrets and put them into our connection config
         for setting in secrets:
             for key in secrets[setting]:
-                new_secret = raw_input ("Enter new secret for '%s' in '%s': " % (key, setting))
+                new_secret = raw_input(f"Enter new secret for '{key}' in '{setting}': ")
                 config[setting_name][key] = new_secret
     except Exception as e:
         #code = str(e).split(':')[0]
@@ -83,12 +83,12 @@ def find_connection(name):
 con_path = None
 
 if len(sys.argv) != 2:
-    sys.exit("Usage: %s <connection name/uuid>" % sys.argv[0])
+    sys.exit(f"Usage: {sys.argv[0]} <connection name/uuid>")
 
 # Find the connection
 con = find_connection(sys.argv[1])
 
-print("Connection found: " + con_path)
+print(f"Connection found: {con_path}")
 
 if con:
     # Obtain new secrets and put then into connection dict
@@ -99,5 +99,5 @@ if con:
     settings = dbus.Interface(proxy, "org.freedesktop.NetworkManager.Settings.Connection")
     settings.Update(con)
 else:
-    sys.exit("No connection '%s' found" % sys.argv[1])
+    sys.exit(f"No connection '{sys.argv[1]}' found")
 

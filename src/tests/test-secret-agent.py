@@ -9,8 +9,10 @@ import dbus.mainloop.glib
 IFACE_SECRET_AGENT = 'org.freedesktop.NetworkManager.SecretAgent'
 IFACE_AGENT_MANAGER = 'org.freedesktop.NetworkManager.AgentManager'
 
+
+
 class NotAuthorizedException(dbus.DBusException):
-    _dbus_error_name = IFACE_SECRET_AGENT + '.NotAuthorized'
+    _dbus_error_name = f'{IFACE_SECRET_AGENT}.NotAuthorized'
 
 class Agent(dbus.service.Object):
     def __init__(self, bus, object_path):
@@ -33,8 +35,7 @@ class Agent(dbus.service.Object):
 
         # return some random GSM secrets
         s_gsm = dbus.Dictionary({'password': 'asdfadfasdfaf'})
-        con = dbus.Dictionary({'gsm': s_gsm})
-        return con
+        return dbus.Dictionary({'gsm': s_gsm})
 
 def register(proxy):
     proxy.Register("test.agent.id", dbus_interface=IFACE_AGENT_MANAGER)

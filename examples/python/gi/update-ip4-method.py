@@ -20,12 +20,12 @@ import sys, socket
 if __name__ == "__main__":
     # parse and validate arguments
     if len(sys.argv) < 3:
-        print("Usage: %s <uuid> <auto|static> [address prefix gateway]" % sys.argv[0])
+        print(f"Usage: {sys.argv[0]} <uuid> <auto|static> [address prefix gateway]")
         sys.exit(1)
 
     method = sys.argv[2]
-    if (method == "static" or method == "manual") and len(sys.argv) < 5:
-        print("Usage: %s %s static address prefix [gateway]" % (sys.argv[0], sys.argv[1]))
+    if method in ["static", "manual"] and len(sys.argv) < 5:
+        print(f"Usage: {sys.argv[0]} {sys.argv[1]} static address prefix [gateway]")
         sys.exit(1)
 
     uuid = sys.argv[1]

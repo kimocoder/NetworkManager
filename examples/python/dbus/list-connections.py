@@ -36,11 +36,11 @@ def dict_to_string(d, indent):
         if type(val) == type(dbus.Array([])):
             for elt in val:
                 if type(elt) == type(dbus.Byte(1)):
-                    str_val += "%s " % int(elt)
+                    str_val += f"{int(elt)} "
                 elif type(elt) == type(dbus.String("")):
-                    str_val += "%s" % elt
+                    str_val += f"{elt}"
         elif type(val) == type(dbus.Dictionary({})):
-            dstr += dict_to_string(val, indent + "    ")
+            dstr += dict_to_string(val, f"{indent}    ")
             add_string = False
         else:
             str_val = val
@@ -51,7 +51,7 @@ def dict_to_string(d, indent):
 def connection_to_string(config):
     # dump a connection configuration to a the console
     for setting_name in config:
-        print("        Setting: %s" % setting_name)
+        print(f"        Setting: {setting_name}")
         print(dict_to_string(config[setting_name], "            "))
     print("")
 
@@ -82,9 +82,9 @@ def print_connections():
 
         # Get the details of the 'connection' setting
         s_con = config['connection']
-        print("    name: %s" % s_con['id'])
-        print("    uuid: %s" % s_con['uuid'])
-        print("    type: %s" % s_con['type'])
+        print(f"    name: {s_con['id']}")
+        print(f"    uuid: {s_con['uuid']}")
+        print(f"    type: {s_con['type']}")
         print("    ------------------------------------------")
         connection_to_string(config)
 

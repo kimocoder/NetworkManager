@@ -41,11 +41,11 @@ def create_bond(bond_name):
         'connection': s_con,
         'ipv4': s_ip4,
         'ipv6': s_ip6})
-    print("Creating bond connection: %s" % bond_name)
+    print(f"Creating bond connection: {bond_name}")
     return add_connection(con)
 
 def create_slave(device, master):
-    slave_name = 'bond-' + master + '-slave-' + device
+    slave_name = f'bond-{master}-slave-{device}'
     s_wired = dbus.Dictionary({'duplex': 'full'})
     s_con = dbus.Dictionary({
         'type': '802-3-ethernet',
@@ -59,11 +59,11 @@ def create_slave(device, master):
     con = dbus.Dictionary({
         '802-3-ethernet': s_wired,
         'connection': s_con})
-    print("Creating slave connection: %s" % slave_name)
+    print(f"Creating slave connection: {slave_name}")
     add_connection(con)
 
 def usage():
-    print("Usage: %s <bond_name> <ifname1> ..." % sys.argv[0])
+    print(f"Usage: {sys.argv[0]} <bond_name> <ifname1> ...")
     sys.exit(0)
 
 
@@ -81,7 +81,7 @@ bus = dbus.SystemBus()
 proxy = bus.get_object("org.freedesktop.NetworkManager", "/org/freedesktop/NetworkManager")
 manager = dbus.Interface(proxy, "org.freedesktop.NetworkManager")
 ac = manager.ActivateConnection(bond_path, "/", "/")
-print("Activating bond: %s (%s)" % (bond_name, ac))
+print(f"Activating bond: {bond_name} ({ac})")
 
 # Monitor the active bond connection
 loop = GObject.MainLoop()
@@ -90,7 +90,7 @@ def properties_changed(props):
         if props['State'] == 2:
             print("Successfully connected")
             loop.quit()
-        if props['State'] == 3 or props['State'] == 4:
+        if props['State'] in [3, 4]:
             print("Bond activation failed")
             loop.quit()
 

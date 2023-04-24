@@ -112,18 +112,20 @@ class PathConfiguration:
 
     @staticmethod
     def top_srcdir():
-        return os.path.abspath(PathConfiguration.srcdir() + "/../..")
+        return os.path.abspath(f"{PathConfiguration.srcdir()}/../..")
 
     @staticmethod
     def test_networkmanager_service_path():
-        v = os.path.abspath(PathConfiguration.top_srcdir() + "/tools/test-networkmanager-service.py")
+        v = os.path.abspath(
+            f"{PathConfiguration.top_srcdir()}/tools/test-networkmanager-service.py"
+        )
         assert os.path.exists(v), ("Cannot find test server at \"%s\"" % (v))
         return v
 
     @staticmethod
     def canonical_script_filename():
         p = 'clients/tests/test-client.py'
-        assert (PathConfiguration.top_srcdir() + '/' + p) == os.path.abspath(__file__)
+        assert f'{PathConfiguration.top_srcdir()}/{p}' == os.path.abspath(__file__)
         return p
 
 ###############################################################################
@@ -145,10 +147,7 @@ class Util:
 
     @staticmethod
     def is_string(s):
-        if Util.python_has_version(3):
-            t = str
-        else:
-            t = basestring
+        t = str if Util.python_has_version(3) else basestring
         return isinstance(s, t)
 
     @staticmethod
@@ -261,9 +260,9 @@ class Util:
                 break
             v = c
         if n < min_num:
-            raise AssertionError("Expected at least %s elements, but %s found" % (min_num, n))
+            raise AssertionError(f"Expected at least {min_num} elements, but {n} found")
         if n > max_num:
-            raise AssertionError("Expected at most %s elements, but %s found" % (max_num, n))
+            raise AssertionError(f"Expected at most {max_num} elements, but {n} found")
         return v
 
     @staticmethod
@@ -298,8 +297,7 @@ class Util:
                 t2 = t.split(v_search)
                 text2.append(t2[0])
                 for t3 in t2[1:]:
-                    text2.append( (v_replace,) )
-                    text2.append(t3)
+                    text2.extend(((v_replace, ), t3))
             text = text2
         return b''.join([(t[0] if isinstance(t, tuple) else t) for t in text])
 
@@ -339,7 +337,9 @@ class Configuration:
             v = os.environ.get(ENV_NM_TEST_CLIENT_NMCLI_PATH, None)
             if v is None:
                 try:
-                    v = os.path.abspath(self.get(ENV_NM_TEST_CLIENT_BUILDDIR) + "/clients/cli/nmcli")
+                    v = os.path.abspath(
+                        f"{self.get(ENV_NM_TEST_CLIENT_BUILDDIR)}/clients/cli/nmcli"
+                    )
                 except:
                     pass
             if not os.path.exists(v):
@@ -393,8 +393,10 @@ class NMStubServer:
             if p.poll() is not None:
                 p.stdin.close()
                 if p.returncode == 77:
-                    raise unittest.SkipTest('the stub service %s exited with status 77' % (service_path))
-                raise Exception('the stub service %s exited unexpectedly' % (service_path))
+                    raise unittest.SkipTest(
+                        f'the stub service {service_path} exited with status 77'
+                    )
+                raise Exception(f'the stub service {service_path} exited unexpectedly')
             nmobj = self._conn_get_main_object(self._conn)
             if nmobj is not None:
                 break
@@ -437,7 +439,7 @@ class NMStubServer:
                 kwargs2 = {}
                 args = list(args)
                 args.append(kwargs2)
-                for k in kwargs.keys():
+                for k in kwargs:
                     kwargs2[k] = kwargs[k]
             return method(*args)
 
@@ -452,11 +454,11 @@ class NMStubServer:
     def findConnectionUuid(self, con_id, required = True):
         try:
             u = Util.iter_single(self.op_FindConnections(con_id = con_id))[1]
-            assert u, ("Invalid uuid %s" % (u))
+            assert u, f"Invalid uuid {u}"
         except Exception as e:
             if not required:
                 return None
-            raise AssertionError("Unexpectedly not found connection %s: %s" % (con_id, str(e)))
+            raise AssertionError(f"Unexpectedly not found connection {con_id}: {str(e)}")
         return u
 
     def setProperty(self, path, propname, value, iface_name = None):
@@ -513,9 +515,11 @@ class AsyncProcess():
         self._p_stdout_buf += b_stdout
         self._p_stderr_buf += b_stderr
 
-        if     return_code is None \
-           and self._timeout_remaining_time() <= 0:
-            raise Exception("process is still running after timeout: %s" % (' '.join(self._args)))
+        if return_code is None \
+               and self._timeout_remaining_time() <= 0:
+            raise Exception(
+                f"process is still running after timeout: {' '.join(self._args)}"
+            )
         return return_code
 
     def wait_and_complete(self):
@@ -537,7 +541,7 @@ class AsyncProcess():
         if return_code is None:
             print(stdout)
             print(stderr)
-            raise Exception("process did not complete in time: %s" % (' '.join(self._args)))
+            raise Exception(f"process did not complete in time: {' '.join(self._args)}")
 
         self._complete_cb(self, return_code, stdout, stderr)
 
@@ -562,10 +566,7 @@ class TestNmcli(NmTestBase):
                     raise Exception("Unexpected token")
                 j = base_idx + len(size_prefix)
                 i = j
-                if Util.python_has_version(3, 0):
-                    eol = ord('\n')
-                else:
-                    eol = '\n'
+                eol = ord('\n') if Util.python_has_version(3, 0) else '\n'
                 while content_expect[i] != eol:
                     i += 1
                 i = i + 1 + int(content_expect[j:i])
@@ -676,7 +677,11 @@ class TestNmcli(NmTestBase):
         # we cannot use frame.f_code.co_filename directly, because it might be different depending
         # on where the file lies and which is CWD. We still want to give the location of
         # the file, so that the user can easier find the source (when looking at the .expected files)
-        self.assertTrue(os.path.abspath(frame.f_code.co_filename).endswith('/'+PathConfiguration.canonical_script_filename()))
+        self.assertTrue(
+            os.path.abspath(frame.f_code.co_filename).endswith(
+                f'/{PathConfiguration.canonical_script_filename()}'
+            )
+        )
 
         if conf.get(ENV_NM_TEST_WITH_LINENO):
             calling_location = '%s:%d:%s()/%d' % (PathConfiguration.canonical_script_filename(), frame.f_lineno, frame.f_code.co_name, calling_num)
@@ -693,7 +698,7 @@ class TestNmcli(NmTestBase):
             lang = 'pl_PL.UTF-8'
             language = 'pl'
         else:
-            self.fail('invalid language %s' % (lang))
+            self.fail(f'invalid language {lang}')
 
         env = {}
         if extra_env is not None:
@@ -737,9 +742,9 @@ class TestNmcli(NmTestBase):
         self._results.append(None)
 
         def complete_cb(async_job,
-                        returncode,
-                        stdout,
-                        stderr):
+                            returncode,
+                            stdout,
+                            stderr):
 
             if expected_stdout is _UNSTABLE_OUTPUT:
                 stdout = '<UNSTABLE OUTPUT>'.encode('utf-8')
@@ -757,18 +762,24 @@ class TestNmcli(NmTestBase):
             ignore_l10n_diff = (    lang != 'C'
                                 and not conf.get(ENV_NM_TEST_CLIENT_CHECK_L10N))
 
-            if expected_stderr is not None and expected_stderr is not _UNSTABLE_OUTPUT:
-                if expected_stderr != stderr:
-                    if ignore_l10n_diff:
-                        self._skip_test_for_l10n_diff.append(test_name)
-                    else:
-                        self.assertEqual(expected_stderr, stderr)
-            if expected_stdout is not None and expected_stdout is not _UNSTABLE_OUTPUT:
-                if expected_stdout != stdout:
-                    if ignore_l10n_diff:
-                        self._skip_test_for_l10n_diff.append(test_name)
-                    else:
-                        self.assertEqual(expected_stdout, stdout)
+            if (
+                expected_stderr is not None
+                and expected_stderr is not _UNSTABLE_OUTPUT
+                and expected_stderr != stderr
+            ):
+                if ignore_l10n_diff:
+                    self._skip_test_for_l10n_diff.append(test_name)
+                else:
+                    self.assertEqual(expected_stderr, stderr)
+            if (
+                expected_stdout is not None
+                and expected_stdout is not _UNSTABLE_OUTPUT
+                and expected_stdout != stdout
+            ):
+                if ignore_l10n_diff:
+                    self._skip_test_for_l10n_diff.append(test_name)
+                else:
+                    self.assertEqual(expected_stdout, stdout)
             if expected_returncode is not None:
                 self.assertEqual(expected_returncode, returncode)
 
@@ -780,22 +791,22 @@ class TestNmcli(NmTestBase):
                    self.assertEqual(returncode, -5)
 
             if check_on_disk:
-                cmd = '$NMCLI %s' % (' '.join([Util.quote(a) for a in args[1:]])),
+                cmd = (f"$NMCLI {' '.join([Util.quote(a) for a in args[1:]])}", )
 
                 content = ('location: %s\n' % (calling_location)).encode('utf8') + \
-                          ('cmd: %s\n' % (cmd)).encode('utf8') + \
-                          ('lang: %s\n' % (lang)).encode('utf8') + \
-                          ('returncode: %d\n' % (returncode)).encode('utf8')
+                              ('cmd: %s\n' % (cmd)).encode('utf8') + \
+                              ('lang: %s\n' % (lang)).encode('utf8') + \
+                              ('returncode: %d\n' % (returncode)).encode('utf8')
                 if len(stdout) > 0:
                     content += ('stdout: %d bytes\n>>>\n' % (len(stdout))).encode('utf8') + \
-                               stdout + \
-                               '\n<<<\n'.encode('utf8')
+                                   stdout + \
+                                   '\n<<<\n'.encode('utf8')
                 if len(stderr) > 0:
                     content += ('stderr: %d bytes\n>>>\n' % (len(stderr))).encode('utf8') + \
-                               stderr + \
-                               '\n<<<\n'.encode('utf8')
+                                   stderr + \
+                                   '\n<<<\n'.encode('utf8')
                 content = ('size: %s\n' % (len(content))).encode('utf8') + \
-                          content
+                              content
 
                 self._results[results_idx] = {
                     'test_name'        : test_name,
@@ -816,13 +827,13 @@ class TestNmcli(NmTestBase):
         while True:
 
             while True:
-                for async_job in list(self._async_jobs[0:MAX_JOBS]):
+                for async_job in list(self._async_jobs[:MAX_JOBS]):
                     async_job.start()
                 # start up to MAX_JOBS jobs, but poll() and complete those
                 # that are already exited. Retry, until there are no more
                 # jobs to start, or until MAX_JOBS are running.
                 jobs_running = []
-                for async_job in list(self._async_jobs[0:MAX_JOBS]):
+                for async_job in list(self._async_jobs[:MAX_JOBS]):
                     if async_job.poll() is not None:
                         self._async_jobs.remove(async_job)
                         async_job.wait_and_complete()
@@ -875,7 +886,9 @@ class TestNmcli(NmTestBase):
 
         test_name = self._testMethodName
 
-        filename = os.path.abspath(PathConfiguration.srcdir() + '/test-client.check-on-disk/' + test_name + '.expected')
+        filename = os.path.abspath(
+            f'{PathConfiguration.srcdir()}/test-client.check-on-disk/{test_name}.expected'
+        )
 
         regenerate = conf.get(ENV_NM_TEST_REGENERATE)
 
@@ -883,9 +896,11 @@ class TestNmcli(NmTestBase):
 
         if results_expect is None:
             if not regenerate:
-                self.fail("Failed to parse expected file '%s'. Let the test write the file by rerunning with NM_TEST_REGENERATE=1" % (filename))
+                self.fail(
+                    f"Failed to parse expected file '{filename}'. Let the test write the file by rerunning with NM_TEST_REGENERATE=1"
+                )
         else:
-            for i in range(0, min(len(results_expect), len(results))):
+            for i in range(min(len(results_expect), len(results))):
                 n = results[i]
                 if results_expect[i] == n['content']:
                     continue
@@ -900,18 +915,21 @@ class TestNmcli(NmTestBase):
                 print("Let the test write the file by rerunning with NM_TEST_REGENERATE=1")
                 print("See howto in %s for details.\n" % (PathConfiguration.canonical_script_filename()))
                 sys.stdout.flush()
-                self.fail("Unexpected output of command, expected %s. Rerun test with NM_TEST_REGENERATE=1 to regenerate files" % (filename))
-            if len(results_expect) != len(results):
-                if not regenerate:
-                    print("\n\n\nThe number of tests in %s does not match the expected content (%s vs %s):" % (filename,  len(results_expect), len(results)))
-                    if len(results_expect) < len(results):
-                        print("ACTUAL OUTPUT:\n[[%s]]\n" % (results[len(results_expect)]['content']))
-                    else:
-                        print("EXPECT OUTPUT:\n[[%s]]\n" % (results_expect[len(results)]))
-                    print("Let the test write the file by rerunning with NM_TEST_REGENERATE=1")
-                    print("See howto in %s for details.\n" % (PathConfiguration.canonical_script_filename()))
-                    sys.stdout.flush()
-                    self.fail("Unexpected output of command, expected %s. Rerun test with NM_TEST_REGENERATE=1 to regenerate files" % (filename))
+                self.fail(
+                    f"Unexpected output of command, expected {filename}. Rerun test with NM_TEST_REGENERATE=1 to regenerate files"
+                )
+            if len(results_expect) != len(results) and not regenerate:
+                print("\n\n\nThe number of tests in %s does not match the expected content (%s vs %s):" % (filename,  len(results_expect), len(results)))
+                if len(results_expect) < len(results):
+                    print("ACTUAL OUTPUT:\n[[%s]]\n" % (results[len(results_expect)]['content']))
+                else:
+                    print("EXPECT OUTPUT:\n[[%s]]\n" % (results_expect[len(results)]))
+                print("Let the test write the file by rerunning with NM_TEST_REGENERATE=1")
+                print("See howto in %s for details.\n" % (PathConfiguration.canonical_script_filename()))
+                sys.stdout.flush()
+                self.fail(
+                    f"Unexpected output of command, expected {filename}. Rerun test with NM_TEST_REGENERATE=1 to regenerate files"
+                )
 
         if regenerate:
             content_new = b''.join([r['content'] for r in results])
@@ -920,13 +938,15 @@ class TestNmcli(NmTestBase):
                     with open(filename, 'wb') as content_file:
                         content_file.write(content_new)
                 except Exception as e:
-                    self.fail("Failure to write '%s': %s" % (filename, e))
+                    self.fail(f"Failure to write '{filename}': {e}")
 
         if skip_test_for_l10n_diff:
             # nmcli loads translations from the installation path. This failure commonly
             # happens because you did not install the binary in the --prefix, before
             # running the test. Hence, translations are not available or differ.
-            self.skipTest("Skipped asserting for localized tests %s. Set NM_TEST_CLIENT_CHECK_L10N=1 to force fail." % (','.join(skip_test_for_l10n_diff)))
+            self.skipTest(
+                f"Skipped asserting for localized tests {','.join(skip_test_for_l10n_diff)}. Set NM_TEST_CLIENT_CHECK_L10N=1 to force fail."
+            )
 
     def nm_test(func):
         def f(self):
@@ -966,7 +986,7 @@ class TestNmcli(NmTestBase):
 
         NM_AP_FLAGS = getattr(NM, '80211ApSecurityFlags')
         rsnf = 0x0
-        rsnf = rsnf | NM_AP_FLAGS.PAIR_TKIP
+        rsnf |= NM_AP_FLAGS.PAIR_TKIP
         rsnf = rsnf | NM_AP_FLAGS.PAIR_CCMP
         rsnf = rsnf | NM_AP_FLAGS.GROUP_TKIP
         rsnf = rsnf | NM_AP_FLAGS.GROUP_CCMP
@@ -1027,9 +1047,14 @@ class TestNmcli(NmTestBase):
     def test_003(self):
         self.init_001()
 
-        replace_stdout = []
-
-        replace_stdout.append((Util.memoize_nullary(lambda: self.srv.findConnectionUuid('con-xx1')), 'UUID-con-xx1-REPLACED-REPLACED-REPLA'))
+        replace_stdout = [
+            (
+                Util.memoize_nullary(
+                    lambda: self.srv.findConnectionUuid('con-xx1')
+                ),
+                'UUID-con-xx1-REPLACED-REPLACED-REPLA',
+            )
+        ]
 
         self.call_nmcli(['c', 'add', 'type', 'ethernet', 'ifname', '*', 'con-name', 'con-xx1'],
                         replace_stdout = replace_stdout)
@@ -1141,9 +1166,14 @@ class TestNmcli(NmTestBase):
     def test_004(self):
         self.init_001()
 
-        replace_stdout = []
-
-        replace_stdout.append((Util.memoize_nullary(lambda: self.srv.findConnectionUuid('con-xx1')), 'UUID-con-xx1-REPLACED-REPLACED-REPLA'))
+        replace_stdout = [
+            (
+                Util.memoize_nullary(
+                    lambda: self.srv.findConnectionUuid('con-xx1')
+                ),
+                'UUID-con-xx1-REPLACED-REPLACED-REPLA',
+            )
+        ]
 
         self.call_nmcli(['c', 'add', 'type', 'wifi', 'ifname', '*', 'ssid', 'foobar', 'con-name', 'con-xx1'],
                         replace_stdout = replace_stdout)
@@ -1278,24 +1308,24 @@ def main():
             else:
                 raise Exception('unknown error during exec')
         except Exception as e:
-            assert False, ("Failure to re-exec dbus-run-session: %s" % (str(e)))
+            assert False, f"Failure to re-exec dbus-run-session: {str(e)}"
 
-    if not dbus_session_inited:
-        # we still don't have a D-Bus session. Probably dbus-run-session is not available.
-        # retry with dbus-launch
-        if os.system('type dbus-launch 1>/dev/null') == 0:
-            try:
-                os.execlp('bash', 'bash', '-e', '-c',
-                          'eval `dbus-launch --sh-syntax`;\n' + \
-                          'trap "kill $DBUS_SESSION_BUS_PID" EXIT;\n' + \
-                          '\n' + \
-                          ' '.join([Util.quote(a) for a in [sys.executable, __file__, '--started-with-dbus-session'] + sys.argv[1:]]) + ' \n' + \
-                          '')
-            except Exception as e:
-                m = str(e)
-            else:
-                m = 'unknown error'
-            assert False, ('Failure to re-exec to start script with dbus-launch: %s' % (m))
+    if (
+        not dbus_session_inited
+        and os.system('type dbus-launch 1>/dev/null') == 0
+    ):
+        try:
+            os.execlp('bash', 'bash', '-e', '-c',
+                      'eval `dbus-launch --sh-syntax`;\n' + \
+                      'trap "kill $DBUS_SESSION_BUS_PID" EXIT;\n' + \
+                      '\n' + \
+                      ' '.join([Util.quote(a) for a in [sys.executable, __file__, '--started-with-dbus-session'] + sys.argv[1:]]) + ' \n' + \
+                      '')
+        except Exception as e:
+            m = str(e)
+        else:
+            m = 'unknown error'
+        assert False, f'Failure to re-exec to start script with dbus-launch: {m}'
 
     r = unittest.main(exit = False)
 

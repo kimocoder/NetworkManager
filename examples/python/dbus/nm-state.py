@@ -42,7 +42,7 @@ proxy = bus.get_object("org.freedesktop.NetworkManager", "/org/freedesktop/Netwo
 manager = dbus.Interface(proxy, "org.freedesktop.NetworkManager")
 
 # Get overall NM connection state
-print("NetworkManager state is: '%s'" % nm_state[manager.state()])
+print(f"NetworkManager state is: '{nm_state[manager.state()]}'")
 
 # Get device-specific state
 devices = manager.GetDevices()
@@ -55,10 +55,10 @@ for d in devices:
     name = prop_iface.Get("org.freedesktop.NetworkManager.Device", "Interface")
 
     # and print them out
-    if state == 100 :   # activated
-        print("Device %s is activated" % name)
+    if state == 100:   # activated
+        print(f"Device {name} is activated")
     else:
-        print("Device %s is not activated (state=%s)" % (name, device_states[state]))
+        print(f"Device {name} is not activated (state={device_states[state]})")
 
 
 # Get active connection state
@@ -78,4 +78,4 @@ for a in active:
     con_details = con_iface.GetSettings()
     con_name = con_details['connection']['id']
 
-    print("Connection '%s' is %s" % (con_name, connectivity_states[state].lower()))
+    print(f"Connection '{con_name}' is {connectivity_states[state].lower()}")

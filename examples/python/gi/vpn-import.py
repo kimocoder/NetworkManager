@@ -21,16 +21,16 @@ filename = sys.argv[1]
 
 connection = None
 for vpn_info in NM.VpnPluginInfo.list_load():
-    print("TRY:  plugin %s" % (vpn_info.get_filename()))
+    print(f"TRY:  plugin {vpn_info.get_filename()}")
     try:
         vpn_plugin = vpn_info.load_editor_plugin()
     except Exception as e:
-        print("SKIP: cannot load plugin: %s" % (e))
+        print(f"SKIP: cannot load plugin: {e}")
         continue
     try:
         connection = vpn_plugin.import_(filename)
     except Exception as e:
-        print("SKIP: failure to import %s" % (e))
+        print(f"SKIP: failure to import {e}")
         continue
     break
 

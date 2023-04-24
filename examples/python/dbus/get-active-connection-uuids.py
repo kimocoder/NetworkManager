@@ -35,7 +35,9 @@ for a in active:
     c_proxy = bus.get_object("org.freedesktop.NetworkManager", connection_path)
     connection = dbus.Interface(c_proxy, "org.freedesktop.NetworkManager.Settings.Connection")
     settings = connection.GetSettings()
-    print("%s (%s) - %s" % (settings['connection']['id'], uuid, settings['connection']['type']))
+    print(
+        f"{settings['connection']['id']} ({uuid}) - {settings['connection']['type']}"
+    )
 
 if len(active) == 0:
     print("No active connections")

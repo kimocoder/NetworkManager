@@ -31,19 +31,15 @@ def connection_saved(connection, error, data):
     main_loop.quit()
 
 if __name__ == "__main__":
-    if len(sys.argv) != 2 and len(sys.argv) != 3:
-        sys.exit('Usage: %s <connection name or UUID> [new zone]' % sys.argv[0])
+    if len(sys.argv) not in [2, 3]:
+        sys.exit(f'Usage: {sys.argv[0]} <connection name or UUID> [new zone]')
 
     main_loop = GLib.MainLoop()
     client = NM.Client.new(None)
     connections = client.get_connections()
 
     con_name = sys.argv[1]
-    if len(sys.argv) == 3:
-        new_zone = sys.argv[2]
-    else:
-        new_zone = None
-
+    new_zone = sys.argv[2] if len(sys.argv) == 3 else None
     found = False
     for c in connections:
         if c.get_id() == con_name or c.get_uuid() == con_name:

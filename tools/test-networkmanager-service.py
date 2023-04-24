@@ -11,7 +11,7 @@ try:
     gi.require_version('NM', '1.0')
     from gi.repository import NM
 except Exception as e:
-    print("Cannot load gi.NM: %s" % (str(e)))
+    print(f"Cannot load gi.NM: {str(e)}")
     sys.exit(77)
 
 import os
@@ -27,8 +27,6 @@ import collections
 ###############################################################################
 
 _DEFAULT_ARG = object()
-
-###############################################################################
 
 class Global:
     pass
@@ -61,7 +59,7 @@ class Util:
             return
         if allow_af_unspec and family == socket.AF_UNSPEC:
             return
-        raise TestError('invalid address family %s' % (family))
+        raise TestError(f'invalid address family {family}')
 
     @staticmethod
     def ip_addr_pton(addr, family=None):
@@ -79,26 +77,22 @@ class Util:
             except:
                 a = socket.inet_pton(socket.AF_INET6, addr)
                 family = socket.AF_INET6
-        if Util.PY3:
-            a = tuple([int(c) for c in a])
-        else:
-            a = tuple([ord(c) for c in a])
+        a = tuple(int(c) for c in a) if Util.PY3 else tuple(ord(c) for c in a)
         return (a, family)
 
     @staticmethod
     def ip_addr_ntop(addr, family = None):
-        if Util.PY3:
-            a = bytes(addr)
-        else:
-            a = ''.join([chr(c) for c in addr])
+        a = bytes(addr) if Util.PY3 else ''.join([chr(c) for c in addr])
         if len(a) == 4:
             f = socket.AF_INET
         elif len(a) == 16:
             f = socket.AF_INET6
         else:
-            raise TestError("Invalid binary IP address '%s'" % (repr(addr)))
+            raise TestError(f"Invalid binary IP address '{repr(addr)}'")
         if family is not None and f != family:
-            raise TestError("Unexpected address family. Expected %s but ip address was %s" % (family, repr(addr)))
+            raise TestError(
+                f"Unexpected address family. Expected {family} but ip address was {repr(addr)}"
+            )
         return socket.inet_ntop(f, a)
 
     @staticmethod
@@ -124,15 +118,18 @@ class Util:
     def ip_net_parse(net, family = None):
         parts = net.split('/')
         if len(parts) != 2:
-            raise TestError("Invalid IP network '%s' has not '/' for the prefix length" % (net))
+            raise TestError(
+                f"Invalid IP network '{net}' has not '/' for the prefix length"
+            )
         prefix = int(parts[1])
         addr, family = Util.ip_addr_norm(parts[0], family)
-        if family == socket.AF_INET:
-            if prefix < 0 or prefix > 32:
-                raise TestError("Invalid prefix length for IPv4 address '%s'" % (net))
-        else:
-            if prefix < 0 or prefix > 128:
-                raise TestError("Invalid prefix length for IPv4 address '%s'" % (net))
+        if (
+            family == socket.AF_INET
+            and (prefix < 0 or prefix > 32)
+            or family != socket.AF_INET
+            and (prefix < 0 or prefix > 128)
+        ):
+            raise TestError(f"Invalid prefix length for IPv4 address '{net}'")
         return (addr, prefix, family)
 
     class RandomSeed():
@@ -142,22 +139,17 @@ class Util:
         def _next(self):
             c = self.cnt
             self.cnt += 1
-            return self.seed + '-' + str(c)
+            return f'{self.seed}-{str(c)}'
         @staticmethod
         def wrap(seed):
             if seed is None:
                 return None
-            if isinstance(seed, Util.RandomSeed):
-                return seed
-            return Util.RandomSeed(seed)
+            return seed if isinstance(seed, Util.RandomSeed) else Util.RandomSeed(seed)
         @staticmethod
         def get(seed, extra_seed = None):
             if seed is None:
                 return None
-            if isinstance(seed, Util.RandomSeed):
-                seed = seed._next()
-            else:
-                seed = str(seed)
+            seed = seed._next() if isinstance(seed, Util.RandomSeed) else str(seed)
             if extra_seed is None:
                 try:
                     extra_seed = Util.RandomSeed._extra_seed
@@ -183,7 +175,7 @@ class Util:
                 s = Util.RandomSeed.get(seed)
                 s = s.encode('utf8')
                 v = hashlib.sha256(s).hexdigest()
-            yield int(v[0:2], 16)
+            yield int(v[:2], 16)
             v = v[2:]
             if length is not None:
                 length -= 1
@@ -201,15 +193,11 @@ class Util:
             # if only one edge is provided (no v_end), then the range
             # is [0, v_start[. That is, random_int(seed, 5), returns
             # values from 0 to 4.
-            if v_start is _DEFAULT_ARG:
-                # by default, return a 32u integer.
-                v_end = 0x100000000
-            else:
-                v_end = v_start
+            v_end = 0x100000000 if v_start is _DEFAULT_ARG else v_start
             v_start = 0
+        elif v_start is _DEFAULT_ARG:
+            raise TestError("Cannot specify end without start")
         else:
-            if v_start is _DEFAULT_ARG:
-                raise TestError("Cannot specify end without start")
             # if a full range is provided, v_end is included.
             # random_int(seed, 0, 4) returns values from 0 to 4.
             v_end += 1
@@ -231,7 +219,7 @@ class Util:
         all_set = list(all_set)
         result = []
         seed = Util.RandomSeed.wrap(seed)
-        for i in list(range(Util.random_int(Util.RandomSeed.get(seed), len(all_set) + 1))):
+        for _ in list(range(Util.random_int(Util.RandomSeed.get(seed), len(all_set) + 1))):
             idx = Util.random_int(Util.RandomSeed.get(seed), len(all_set))
             result.append(all_set[idx])
             del all_set[idx]
@@ -249,10 +237,7 @@ class Util:
         else:
             prefix = None
             Util.addr_family_check(family)
-        if family == socket.AF_INET:
-            l = 4
-        else:
-            l = 16
+        l = 4 if family == socket.AF_INET else 16
         a = tuple(Util.random_stream(seed, l))
         if prefix is not None:
             a2 = []
@@ -307,7 +292,9 @@ class Util:
                 if val.signature == '(ayuayu)':
                     return GLib.Variant('a(ayuayu)', [Util.variant_from_dbus(x) for x in val])
             except Exception as e:
-                raise Exception("Cannot convert array element to type '%s': %s" % (val.signature, e.message))
+                raise Exception(
+                    f"Cannot convert array element to type '{val.signature}': {e.message}"
+                )
         if isinstance(val, dbus.Dictionary):
             if val.signature == 'ss':
                 return GLib.Variant('a{ss}', collections.OrderedDict([(str(k), str(v)) for k, v in val.items()]))
@@ -321,7 +308,7 @@ class Util:
                     ])
                 return GLib.Variant('a{sa{sv}}', c)
 
-        raise Exception("Unsupported type for value '%s'" % (repr(val)))
+        raise Exception(f"Unsupported type for value '{repr(val)}'")
 
 ###############################################################################
 
@@ -424,17 +411,21 @@ class NmUtil:
             if isinstance(v_setting_name, (dbus.String, str)):
                 v_setting_name = str(v_setting_name)
             else:
-                raise Exception("Expected string dict, but got '%s' key" % (v_setting_name))
+                raise Exception(f"Expected string dict, but got '{v_setting_name}' key")
             x_setting = []
             for v_property_name, v_value in list(v_setting.items()):
                 if isinstance(v_property_name, (dbus.String, str)):
                     v_property_name = str(v_property_name)
                 else:
-                    raise Exception("Expected string dict, but got '%s' subkey under %s (%s)" % (v_property_name, v_setting_name, repr(con_hash)))
+                    raise Exception(
+                        f"Expected string dict, but got '{v_property_name}' subkey under {v_setting_name} ({repr(con_hash)})"
+                    )
                 try:
                     v = Util.variant_from_dbus(v_value)
                 except Exception as e:
-                    raise Exception("Unsupported value %s.%s = %s (%s)" % (v_setting_name, v_property_name, v_value, str(e)))
+                    raise Exception(
+                        f"Unsupported value {v_setting_name}.{v_property_name} = {v_value} ({str(e)})"
+                    )
                 x_setting.append((v_property_name, v))
 
             x_con.append((v_setting_name, collections.OrderedDict(x_setting)))
@@ -483,7 +474,9 @@ class NmUtil:
                       NM.SETTING_WIMAX_SETTING_NAME,
                       NM.SETTING_WIRED_SETTING_NAME,
                       NM.SETTING_WIRELESS_SETTING_NAME ]:
-            raise BusErr.InvalidPropertyException('connection.type: unsupported connection type "%s"' % (t))
+            raise BusErr.InvalidPropertyException(
+                f'connection.type: unsupported connection type "{t}"'
+            )
 
         try:
             con_nm = NmUtil.con_hash_to_connection(con_hash, do_verify = True, do_normalize = True)
@@ -535,9 +528,7 @@ class ExportedObj(dbus.service.Object):
 
     @staticmethod
     def to_path(src):
-        if src:
-            return dbus.ObjectPath(src.path)
-        return dbus.ObjectPath("/")
+        return dbus.ObjectPath(src.path) if src else dbus.ObjectPath("/")
 
     def __init__(self, object_path, ident = None):
         dbus.service.Object.__init__(self)
@@ -590,44 +581,46 @@ class ExportedObj(dbus.service.Object):
             for p, dbus_interface in self._dbus_ifaces.items():
                 if propname in dbus_interface.props:
                     if props is not None:
-                        raise TestError("Cannot uniquely find the property '%s' on object '%s'" % (propname, self.path))
+                        raise TestError(
+                            f"Cannot uniquely find the property '{propname}' on object '{self.path}'"
+                        )
                     props = dbus_interface.props
                     dbus_iface = p
             if props is None:
-                raise TestError("Cannot find the property '%s' on object '%s'" % (propname, self.path))
+                raise TestError(
+                    f"Cannot find the property '{propname}' on object '{self.path}'"
+                )
         else:
             try:
                 dbus_interface = self._dbus_interface_get(dbus_iface)
                 props = self._dbus_interface_get_property(dbus_interface)
             except:
                 if dry_run:
-                    raise TestError("No interface '%s' on '%s'" % (dbus_iface, self.path))
+                    raise TestError(f"No interface '{dbus_iface}' on '{self.path}'")
                 raise
 
         if dry_run:
             if propname not in props:
-                raise TestError("No property '%s' on '%s' on '%s'" % (propname, dbus_iface, self.path))
+                raise TestError(f"No property '{propname}' on '{dbus_iface}' on '{self.path}'")
 
-            permission_granted = False
-
-            if isinstance(self, ActiveConnection):
-                if dbus_iface == IFACE_ACTIVE_CONNECTION:
-                    if propname == PRP_ACTIVE_CONNECTION_STATE:
-                        permission_granted = True
-                elif dbus_iface == IFACE_VPN_CONNECTION:
-                    if propname == PRP_VPN_CONNECTION_VPN_STATE:
-                        permission_granted = True
-
+            permission_granted = isinstance(self, ActiveConnection) and (
+                dbus_iface == IFACE_ACTIVE_CONNECTION
+                and propname == PRP_ACTIVE_CONNECTION_STATE
+                or dbus_iface != IFACE_ACTIVE_CONNECTION
+                and dbus_iface == IFACE_VPN_CONNECTION
+                and propname == PRP_VPN_CONNECTION_VPN_STATE
+            )
             if not permission_granted:
-                raise TestError("Cannot set property '%s' on '%s' on '%s' via D-Bus" % (propname, dbus_iface, self.path))
+                raise TestError(
+                    f"Cannot set property '{propname}' on '{dbus_iface}' on '{self.path}' via D-Bus"
+                )
 
             return
 
         assert propname in props
 
-        if not force_update:
-            if props[propname] == value:
-                return
+        if not force_update and props[propname] == value:
+            return
 
         props[propname] = value
         self._dbus_property_notify(dbus_iface, propname)
@@ -661,10 +654,7 @@ class ExportedObj(dbus.service.Object):
         return self._dbus_property_get(dbus_iface, name)
 
     def get_managed_ifaces(self):
-        my_ifaces = {}
-        for iface in self._dbus_ifaces:
-            my_ifaces[iface] = self._dbus_ifaces[iface].props
-        return my_ifaces
+        return {iface: self._dbus_ifaces[iface].props for iface in self._dbus_ifaces}
 
 ###############################################################################
 
@@ -704,101 +694,154 @@ class Device(ExportedObj):
         self.prp_state = NM.DeviceState.UNAVAILABLE
 
         props = {
-            PRP_DEVICE_UDI:                   "/sys/devices/virtual/%s" % (iface),
-            PRP_DEVICE_IFACE:                 iface,
-            PRP_DEVICE_DRIVER:                "virtual",
-            PRP_DEVICE_STATE:                 dbus.UInt32(self.prp_state),
-            PRP_DEVICE_STATE_REASON:          dbus.Struct((dbus.UInt32(self.prp_state), dbus.UInt32(NM.DeviceStateReason.NONE))),
-            PRP_DEVICE_ACTIVE_CONNECTION:     ExportedObj.to_path(None),
-            PRP_DEVICE_IP4_CONFIG:            ExportedObj.to_path(self.ip4_config),
-            PRP_DEVICE_IP6_CONFIG:            ExportedObj.to_path(self.ip6_config),
-            PRP_DEVICE_DHCP4_CONFIG:          ExportedObj.to_path(self.dhcp4_config),
-            PRP_DEVICE_DHCP6_CONFIG:          ExportedObj.to_path(self.dhcp6_config),
-            PRP_DEVICE_MANAGED:               True,
-            PRP_DEVICE_AUTOCONNECT:           True,
-            PRP_DEVICE_DEVICE_TYPE:           dbus.UInt32(devtype),
+            PRP_DEVICE_UDI: f"/sys/devices/virtual/{iface}",
+            PRP_DEVICE_IFACE: iface,
+            PRP_DEVICE_DRIVER: "virtual",
+            PRP_DEVICE_STATE: dbus.UInt32(self.prp_state),
+            PRP_DEVICE_STATE_REASON: dbus.Struct(
+                (
+                    dbus.UInt32(self.prp_state),
+                    dbus.UInt32(NM.DeviceStateReason.NONE),
+                )
+            ),
+            PRP_DEVICE_ACTIVE_CONNECTION: ExportedObj.to_path(None),
+            PRP_DEVICE_IP4_CONFIG: ExportedObj.to_path(self.ip4_config),
+            PRP_DEVICE_IP6_CONFIG: ExportedObj.to_path(self.ip6_config),
+            PRP_DEVICE_DHCP4_CONFIG: ExportedObj.to_path(self.dhcp4_config),
+            PRP_DEVICE_DHCP6_CONFIG: ExportedObj.to_path(self.dhcp6_config),
+            PRP_DEVICE_MANAGED: True,
+            PRP_DEVICE_AUTOCONNECT: True,
+            PRP_DEVICE_DEVICE_TYPE: dbus.UInt32(devtype),
             PRP_DEVICE_AVAILABLE_CONNECTIONS: ExportedObj.to_path_array([]),
-            PRP_DEVICE_LLDP_NEIGHBORS:        dbus.Array([
-                dbus.Dictionary({
-                    'chassis-id-type':      dbus.UInt32(6),
-                    'chassis-id':           dbus.String('00:11:22:33:44:00'),
-                    'port-id-type':         dbus.UInt32(7),
-                    'port-id':              dbus.String('Uplink port'),
-                    'port-description':     dbus.String('GigabitEthernet #1'),
-                    'system-name':          dbus.String('test1.example.com'),
-                    'system-description':   dbus.String('Test system #1'),
-                    'system-capabilities':  dbus.UInt32(20),
-                    'destination':          dbus.String('nearest-bridge'),
-                }),
-                dbus.Dictionary({
-                    'chassis-id-type':      dbus.UInt32(2),
-                    'chassis-id':           dbus.String('chassis1'),
-                    'port-id-type':         dbus.UInt32(3),
-                    'port-id':              dbus.String('44:44:44:44:44:44'),
-                    'port-description':     dbus.String('GigabitEthernet #2'),
-                    'system-name':          dbus.String('test2.example.com'),
-                    'system-description':   dbus.String('Test system #2'),
-                    'system-capabilities':  dbus.UInt32(2047),
-                    'destination':          dbus.String('nearest-non-tpmr-bridge'),
-                    'ieee-802-1-vlans':     dbus.Array([
-                        dbus.Dictionary({
-                            'vid':          dbus.UInt32(80),
-                            'name':         dbus.String('vlan80'),
-                        }, signature = 'sv'),
-                        dbus.Dictionary({
-                            'vid':          dbus.UInt32(4000),
-                            'name':         dbus.String('My VLAN'),
-                        }, signature = 'sv'),
-                    ]),
-                    'ieee-802-1-ppvids':    dbus.Array([
-                        dbus.Dictionary({
-                            'ppvid':        dbus.UInt32(4),
-                            'flags':        dbus.UInt32(0x12),
-                        }, signature = 'sv'),
-                        dbus.Dictionary({
-                            'ppvid':        dbus.UInt32(10),
-                            'flags':        dbus.UInt32(0x31),
-                        }, signature = 'sv'),
-                    ]),
-
-                }),
-                dbus.Dictionary({
-                    'chassis-id-type':      dbus.UInt32(6),
-                    'chassis-id':           dbus.String('00:11:22:33:44:22'),
-                    'port-id-type':         dbus.UInt32(1),
-                    'port-id':              dbus.String('port1'),
-                    'port-description':     dbus.String('GigabitEthernet #3'),
-                    'system-name':          dbus.String('test3.example.com'),
-                    'system-description':   dbus.String('Test system #3'),
-                    'system-capabilities':  dbus.UInt32(40),
-                    'destination':          dbus.String('nearest-customer-bridge'),
-                    'management-addresses': dbus.Array([
-                        dbus.Dictionary({
-                            'address-subtype':          dbus.UInt32(1),
-                            'address':                  dbus.ByteArray(b'\xc0\xa8\x01\x01'),
-                            'interface-number':         dbus.UInt32(4),
-                            'interface-number-subtype': dbus.UInt32(3),
-                            'object-id':                dbus.ByteArray(b'\x01\x02\x03\x04')
-                        }, signature = 'sv'),
-                        dbus.Dictionary({
-                            'address-subtype':          dbus.UInt32(2),
-                            'address':                  dbus.ByteArray(b'\xfd\x01\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x12\x34\x56\x78'),
-                            'interface-number':         dbus.UInt32(1),
-                            'interface-number-subtype': dbus.UInt32(2),
-                        }, signature = 'sv'),
-                    ]),
-                    'ieee-802-3-mac-phy-conf': dbus.Dictionary({
-                        'autoneg':              dbus.UInt32(3),
-                        'pmd-autoneg-cap':      dbus.UInt32(0xfe),
-                        'operational-mau-type': dbus.UInt32(5),
-                    }, signature = 'sv'),
-                    'ieee-802-3-power-via-mdi': dbus.Dictionary({
-                        'mdi-power-support':    dbus.UInt32(7),
-                        'pse-power-pair':       dbus.UInt32(6),
-                        'power-class':          dbus.UInt32(1),
-                    }, signature = 'sv'),
-                })
-            ], 'a{sv}')
+            PRP_DEVICE_LLDP_NEIGHBORS: dbus.Array(
+                [
+                    dbus.Dictionary(
+                        {
+                            'chassis-id-type': dbus.UInt32(6),
+                            'chassis-id': dbus.String('00:11:22:33:44:00'),
+                            'port-id-type': dbus.UInt32(7),
+                            'port-id': dbus.String('Uplink port'),
+                            'port-description': dbus.String('GigabitEthernet #1'),
+                            'system-name': dbus.String('test1.example.com'),
+                            'system-description': dbus.String('Test system #1'),
+                            'system-capabilities': dbus.UInt32(20),
+                            'destination': dbus.String('nearest-bridge'),
+                        }
+                    ),
+                    dbus.Dictionary(
+                        {
+                            'chassis-id-type': dbus.UInt32(2),
+                            'chassis-id': dbus.String('chassis1'),
+                            'port-id-type': dbus.UInt32(3),
+                            'port-id': dbus.String('44:44:44:44:44:44'),
+                            'port-description': dbus.String('GigabitEthernet #2'),
+                            'system-name': dbus.String('test2.example.com'),
+                            'system-description': dbus.String('Test system #2'),
+                            'system-capabilities': dbus.UInt32(2047),
+                            'destination': dbus.String('nearest-non-tpmr-bridge'),
+                            'ieee-802-1-vlans': dbus.Array(
+                                [
+                                    dbus.Dictionary(
+                                        {
+                                            'vid': dbus.UInt32(80),
+                                            'name': dbus.String('vlan80'),
+                                        },
+                                        signature='sv',
+                                    ),
+                                    dbus.Dictionary(
+                                        {
+                                            'vid': dbus.UInt32(4000),
+                                            'name': dbus.String('My VLAN'),
+                                        },
+                                        signature='sv',
+                                    ),
+                                ]
+                            ),
+                            'ieee-802-1-ppvids': dbus.Array(
+                                [
+                                    dbus.Dictionary(
+                                        {
+                                            'ppvid': dbus.UInt32(4),
+                                            'flags': dbus.UInt32(0x12),
+                                        },
+                                        signature='sv',
+                                    ),
+                                    dbus.Dictionary(
+                                        {
+                                            'ppvid': dbus.UInt32(10),
+                                            'flags': dbus.UInt32(0x31),
+                                        },
+                                        signature='sv',
+                                    ),
+                                ]
+                            ),
+                        }
+                    ),
+                    dbus.Dictionary(
+                        {
+                            'chassis-id-type': dbus.UInt32(6),
+                            'chassis-id': dbus.String('00:11:22:33:44:22'),
+                            'port-id-type': dbus.UInt32(1),
+                            'port-id': dbus.String('port1'),
+                            'port-description': dbus.String('GigabitEthernet #3'),
+                            'system-name': dbus.String('test3.example.com'),
+                            'system-description': dbus.String('Test system #3'),
+                            'system-capabilities': dbus.UInt32(40),
+                            'destination': dbus.String('nearest-customer-bridge'),
+                            'management-addresses': dbus.Array(
+                                [
+                                    dbus.Dictionary(
+                                        {
+                                            'address-subtype': dbus.UInt32(1),
+                                            'address': dbus.ByteArray(
+                                                b'\xc0\xa8\x01\x01'
+                                            ),
+                                            'interface-number': dbus.UInt32(4),
+                                            'interface-number-subtype': dbus.UInt32(
+                                                3
+                                            ),
+                                            'object-id': dbus.ByteArray(
+                                                b'\x01\x02\x03\x04'
+                                            ),
+                                        },
+                                        signature='sv',
+                                    ),
+                                    dbus.Dictionary(
+                                        {
+                                            'address-subtype': dbus.UInt32(2),
+                                            'address': dbus.ByteArray(
+                                                b'\xfd\x01\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x12\x34\x56\x78'
+                                            ),
+                                            'interface-number': dbus.UInt32(1),
+                                            'interface-number-subtype': dbus.UInt32(
+                                                2
+                                            ),
+                                        },
+                                        signature='sv',
+                                    ),
+                                ]
+                            ),
+                            'ieee-802-3-mac-phy-conf': dbus.Dictionary(
+                                {
+                                    'autoneg': dbus.UInt32(3),
+                                    'pmd-autoneg-cap': dbus.UInt32(0xFE),
+                                    'operational-mau-type': dbus.UInt32(5),
+                                },
+                                signature='sv',
+                            ),
+                            'ieee-802-3-power-via-mdi': dbus.Dictionary(
+                                {
+                                    'mdi-power-support': dbus.UInt32(7),
+                                    'pse-power-pair': dbus.UInt32(6),
+                                    'power-class': dbus.UInt32(1),
+                                },
+                                signature='sv',
+                            ),
+                        }
+                    ),
+                ],
+                'a{sv}',
+            ),
         }
 
         self.dbus_interface_add(IFACE_DEVICE, props, Device.PropertiesChanged)
@@ -839,7 +882,6 @@ class Device(ExportedObj):
     def Delete(self):
         # We don't currently support any software device types, so...
         raise BusErr.NotSoftwareException()
-        pass
 
     @dbus.service.signal(IFACE_DEVICE, signature='a{sv}')
     def PropertiesChanged(self, changed):
@@ -946,14 +988,14 @@ class WifiAp(ExportedObj):
             flags = 0x1
         if wpaf is None:
             wpaf = 0x0
-            wpaf = wpaf | NM_AP_FLAGS.PAIR_TKIP
+            wpaf |= NM_AP_FLAGS.PAIR_TKIP
             wpaf = wpaf | NM_AP_FLAGS.PAIR_CCMP
             wpaf = wpaf | NM_AP_FLAGS.GROUP_TKIP
             wpaf = wpaf | NM_AP_FLAGS.GROUP_CCMP
             wpaf = wpaf | NM_AP_FLAGS.KEY_MGMT_PSK
         if rsnf is None:
             rsnf = 0x0
-            rsnf = rsnf | NM_AP_FLAGS.PAIR_TKIP
+            rsnf |= NM_AP_FLAGS.PAIR_TKIP
             rsnf = rsnf | NM_AP_FLAGS.PAIR_CCMP
             rsnf = rsnf | NM_AP_FLAGS.GROUP_TKIP
             rsnf = rsnf | NM_AP_FLAGS.GROUP_CCMP
@@ -1043,8 +1085,8 @@ class WifiDevice(Device):
             self._dbus_property_set(IFACE_WIFI, PRP_WIFI_LAST_SCAN, dbus.Int64(ts))
             self.scan_cb_id = None
             return False
+
         self.scan_cb_id = GLib.idle_add(cb)
-        pass
 
     @dbus.service.signal(IFACE_WIFI, signature='o')
     def AccessPointAdded(self, ap_path):
@@ -1080,7 +1122,7 @@ class WifiDevice(Device):
             if ap.path == path:
                 self.remove_ap(ap)
                 return
-        raise BusErr.ApNotFoundException("AP %s not found" % path)
+        raise BusErr.ApNotFoundException(f"AP {path} not found")
 
 
 ###############################################################################
@@ -1143,8 +1185,10 @@ class ActiveConnection(ExportedObj):
 
         if self.is_vpn:
             props = {
-                PRP_VPN_CONNECTION_VPN_STATE: dbus.UInt32(NM.VpnConnectionState.UNKNOWN),
-                PRP_VPN_CONNECTION_BANNER:    '*** VPN connection %s ***' % (con_inst.get_id()),
+                PRP_VPN_CONNECTION_VPN_STATE: dbus.UInt32(
+                    NM.VpnConnectionState.UNKNOWN
+                ),
+                PRP_VPN_CONNECTION_BANNER: f'*** VPN connection {con_inst.get_id()} ***',
             }
 
             self.dbus_interface_add(IFACE_VPN_CONNECTION, props, ActiveConnection.VpnPropertiesChanged)
@@ -1322,7 +1366,9 @@ class NetworkManager(ExportedObj):
 
     @dbus.service.method(dbus_interface=IFACE_NM, in_signature='a{sa{sv}}oo', out_signature='oo')
     def AddAndActivateConnection(self, con_hash, devpath, specific_object):
-        conpath, acpath, result = self.AddAndActivateConnection2(con_hash, devpath, specific_object, dict())
+        conpath, acpath, result = self.AddAndActivateConnection2(
+            con_hash, devpath, specific_object, {}
+        )
         return (conpath, acpath)
 
     @dbus.service.method(dbus_interface=IFACE_NM, in_signature='a{sa{sv}}ooa{sv}', out_signature='ooa{sv}')
@@ -1337,10 +1383,7 @@ class NetworkManager(ExportedObj):
 
     @dbus.service.method(dbus_interface=IFACE_NM, in_signature='b', out_signature='')
     def Sleep(self, do_sleep):
-        if do_sleep:
-            state = NM.State.ASLEEP
-        else:
-            state = NM.State.DISCONNECTED
+        state = NM.State.ASLEEP if do_sleep else NM.State.DISCONNECTED
         self.set_state(state)
 
     @dbus.service.method(dbus_interface=IFACE_NM, in_signature='b', out_signature='')
@@ -1383,22 +1426,16 @@ class NetworkManager(ExportedObj):
     def find_devices(self, ident = _DEFAULT_ARG, path = _DEFAULT_ARG, iface = _DEFAULT_ARG, ip_iface = _DEFAULT_ARG, dev_type = _DEFAULT_ARG):
         r = None
         for d in self.devices:
-            if ident is not _DEFAULT_ARG:
-                if d.ident != ident:
-                    continue
-            if path is not _DEFAULT_ARG:
-                if d.path != path:
-                    continue
-            if iface is not _DEFAULT_ARG:
-                if d.iface != iface:
-                    continue
-            if ip_iface is not _DEFAULT_ARG:
-                # ignore iface/ip_iface distinction for now
-                if d.iface != ip_iface:
-                    continue
-            if dev_type is not _DEFAULT_ARG:
-                if not isinstance(d, dev_type):
-                    continue
+            if ident is not _DEFAULT_ARG and d.ident != ident:
+                continue
+            if path is not _DEFAULT_ARG and d.path != path:
+                continue
+            if iface is not _DEFAULT_ARG and d.iface != iface:
+                continue
+            if ip_iface is not _DEFAULT_ARG and d.iface != ip_iface:
+                continue
+            if dev_type is not _DEFAULT_ARG and not isinstance(d, dev_type):
+                continue
             yield d
 
     def find_device_first(self, ident = _DEFAULT_ARG, path = _DEFAULT_ARG, iface = _DEFAULT_ARG, ip_iface = _DEFAULT_ARG, dev_type = _DEFAULT_ARG, require = None):
@@ -1414,7 +1451,7 @@ class NetworkManager(ExportedObj):
 
     def add_device(self, device):
         if self.find_device_first(ident = device.ident, path = device.path) is not None:
-            raise TestError("Duplicate device ident=%s / path=%s" % (device.ident, device.path))
+            raise TestError(f"Duplicate device ident={device.ident} / path={device.path}")
         device.export()
         self.devices.append(device)
         self._dbus_property_set(IFACE_NM, PRP_NM_DEVICES, ExportedObj.to_path_array(self.devices))
@@ -1457,7 +1494,7 @@ class NetworkManager(ExportedObj):
             for path, iface_args in all_args:
                 o = gl.object_manager.find_object(path)
                 if o is None:
-                    raise TestError("Object %s does not exist" % (path))
+                    raise TestError(f"Object {path} does not exist")
                 for iface_name, args in iface_args:
                     for propname, value in args:
                         o._dbus_property_set(iface_name, propname, value,
@@ -1477,7 +1514,7 @@ class NetworkManager(ExportedObj):
             d = self.find_device_first(ident = args['device'], require = TestError)
             del args['device']
             if 'ssid' not in args:
-                args['ssid'] = d.ident + '-ap-' + str(WifiAp.path_counter_next)
+                args['ssid'] = f'{d.ident}-ap-{str(WifiAp.path_counter_next)}'
             ap = WifiAp(**args)
             return ExportedObj.to_path(d.add_ap(ap))
         raise TestError("Invalid python type \"%s\"" % (class_name))
@@ -1540,7 +1577,7 @@ PRP_CONNECTION_FILENAME = 'Filename'
 class Connection(ExportedObj):
     def __init__(self, path_counter, con_hash, do_verify_strict=True):
 
-        path = "/org/freedesktop/NetworkManager/Settings/Connection/%s" % (path_counter)
+        path = f"/org/freedesktop/NetworkManager/Settings/Connection/{path_counter}"
 
         ExportedObj.__init__(self, path)
 
@@ -1549,7 +1586,7 @@ class Connection(ExportedObj):
             s_con = {}
             con_hash[NM.SETTING_CONNECTION_SETTING_NAME] = s_con
         if NmUtil.con_hash_get_id(con_hash) is None:
-            s_con[NM.SETTING_CONNECTION_ID] = 'connection-%s' % (path_counter)
+            s_con[NM.SETTING_CONNECTION_ID] = f'connection-{path_counter}'
         if NmUtil.con_hash_get_uuid(con_hash) is None:
             s_con[NM.SETTING_CONNECTION_UUID] = str(uuid.uuid3(uuid.NAMESPACE_URL, path))
 
@@ -1561,7 +1598,7 @@ class Connection(ExportedObj):
 
         props = {
             PRP_CONNECTION_UNSAVED: False,
-            PRP_CONNECTION_FILENAME: "/etc/NetworkManager/system-connections/" + self.get_id(),
+            PRP_CONNECTION_FILENAME: f"/etc/NetworkManager/system-connections/{self.get_id()}",
         }
 
         self.dbus_interface_add(IFACE_CONNECTION, props)
@@ -1585,7 +1622,9 @@ class Connection(ExportedObj):
         old_uuid = self.get_uuid()
         new_uuid = NmUtil.con_hash_get_uuid(con_hash)
         if old_uuid != new_uuid:
-            raise BusErr.InvalidPropertyException('connection.uuid: cannot change the uuid from %s to %s' % (old_uuid, new_uuid))
+            raise BusErr.InvalidPropertyException(
+                f'connection.uuid: cannot change the uuid from {old_uuid} to {new_uuid}'
+            )
 
         self.con_hash = con_hash;
         self.Updated()
@@ -1665,15 +1704,12 @@ class Settings(ExportedObj):
 
     def find_connections(self, path = None, con_id = None, con_uuid = None):
         for c in self.get_connections():
-            if path is not None:
-                if c.path != path:
-                    continue
-            if con_id is not None:
-                if c.get_id() != con_id:
-                    continue
-            if con_uuid is not None:
-                if c.get_uuid() != con_uuid:
-                    continue
+            if path is not None and c.path != path:
+                continue
+            if con_id is not None and c.get_id() != con_id:
+                continue
+            if con_uuid is not None and c.get_uuid() != con_uuid:
+                continue
             yield c
 
     @dbus.service.method(dbus_interface=IFACE_SETTINGS, in_signature='', out_signature='ao')
@@ -1690,7 +1726,9 @@ class Settings(ExportedObj):
 
         uuid = con_inst.get_uuid()
         if uuid in [c.get_uuid() for c in self.get_connections(stable_order = False)]:
-            raise BusErr.InvalidSettingException('cannot add duplicate connection with uuid %s' % (uuid))
+            raise BusErr.InvalidSettingException(
+                f'cannot add duplicate connection with uuid {uuid}'
+            )
 
         con_inst.export()
         self.connections[con_inst.path] = con_inst
@@ -1780,13 +1818,12 @@ class IP4Config(ExportedObj):
         seed = Util.RandomSeed.wrap(generate_seed)
 
         gateway = None
-        if seed:
-            if Util.random_bool(seed):
-                gateway = Util.random_ip(seed, net = '192.168.0.0/16')[0]
+        if seed and Util.random_bool(seed):
+            gateway = Util.random_ip(seed, net = '192.168.0.0/16')[0]
 
         addrs = []
         if seed:
-            for n in range(0, Util.random_int(seed, 4)):
+            for n in range(Util.random_int(seed, 4)):
                 a = {
                     'addr':    Util.random_ip(seed, net = '192.168.0.0/16')[0],
                     'prefix':  Util.random_int(seed, 17, 32),
@@ -1796,7 +1833,7 @@ class IP4Config(ExportedObj):
 
         routes = []
         if seed:
-            for n in range(0, Util.random_int(seed, 4)):
+            for _ in range(Util.random_int(seed, 4)):
                 a = {
                     'dest':     Util.random_ip(seed, net = '192.168.0.0/16')[0],
                     'prefix':   Util.random_int(seed, 17, 32),
@@ -1807,29 +1844,32 @@ class IP4Config(ExportedObj):
 
         nameservers = []
         if seed:
-            nameservers = list([Util.random_ip(seed, net = '192.168.0.0/16')[0] for x in range(Util.random_int(seed, 4))])
+            nameservers = [
+                Util.random_ip(seed, net='192.168.0.0/16')[0]
+                for _ in range(Util.random_int(seed, 4))
+            ]
 
         names_selection = ['foo1.bar', 'foo2.bar', 'foo3.bar', 'foo4.bar', 'fo.o.bar', 'fo.x.y'];
 
         domains = []
         if seed:
-            domains = Util.random_subset(seed, ['dom4.' + s for s in names_selection])
+            domains = Util.random_subset(seed, [f'dom4.{s}' for s in names_selection])
 
         searches = []
         if seed:
-            domains = Util.random_subset(seed, ['sear4.' + s for s in names_selection])
+            domains = Util.random_subset(seed, [f'sear4.{s}' for s in names_selection])
 
         dnsoptions = []
         if seed:
             dnsoptions = Util.random_subset(seed, ['dns4-opt1', 'dns4-opt2', 'dns4-opt3', 'dns4-opt4'])
 
-        dnspriority = 0
-        if seed:
-            dnspriority = Util.random_int(seed, -10000, 10000)
-
+        dnspriority = Util.random_int(seed, -10000, 10000) if seed else 0
         winsservers = []
         if seed:
-            winsservers = list([Util.random_ip(seed, net = '192.168.0.0/16')[0] for x in range(Util.random_int(seed, 4))])
+            winsservers = [
+                Util.random_ip(seed, net='192.168.0.0/16')[0]
+                for _ in range(Util.random_int(seed, 4))
+            ]
 
         return {
             PRP_IP4_CONFIG_ADDRESSES:   dbus.Array([
@@ -1842,7 +1882,7 @@ class IP4Config(ExportedObj):
             PRP_IP4_CONFIG_ADDRESSDATA: dbus.Array([
                                                 dbus.Dictionary(collections.OrderedDict( [ ('address', dbus.String(a['addr'])),
                                                                                            ('prefix',  dbus.UInt32(a['prefix']))] + \
-                                                                                        ([ ('gateway', dbus.String(a['gateway'])) ] if a['gateway'] else [])),
+                                                                                            ([ ('gateway', dbus.String(a['gateway'])) ] if a['gateway'] else [])),
                                                                 'sv')
                                                 for a in addrs
                                             ],
@@ -1859,8 +1899,8 @@ class IP4Config(ExportedObj):
             PRP_IP4_CONFIG_ROUTEDATA:   dbus.Array([
                                                 dbus.Dictionary(collections.OrderedDict( [ ('dest',     dbus.String(a['dest'])),
                                                                                            ('prefix',   dbus.UInt32(a['prefix']))] + \
-                                                                                        ([ ('next-hop', dbus.String(a['next-hop'])) ] if a['next-hop'] else []) + \
-                                                                                        ([ ('metric',   dbus.UInt32(a['metric'])) ] if a['metric'] != -1 else [])),
+                                                                                            ([ ('next-hop', dbus.String(a['next-hop'])) ] if a['next-hop'] else []) + \
+                                                                                            ([ ('metric',   dbus.UInt32(a['metric'])) ] if a['metric'] != -1 else [])),
                                                                 'sv')
                                                 for a in routes
                                             ],
@@ -1914,13 +1954,12 @@ class IP6Config(ExportedObj):
         seed = Util.RandomSeed.wrap(generate_seed)
 
         gateway = None
-        if seed:
-            if Util.random_bool(seed):
-                gateway = Util.random_ip(seed, net = '2001:a::/64')[0]
+        if seed and Util.random_bool(seed):
+            gateway = Util.random_ip(seed, net = '2001:a::/64')[0]
 
         addrs = []
         if seed:
-            for n in range(0, Util.random_int(seed, 4)):
+            for n in range(Util.random_int(seed, 4)):
                 a = {
                     'addr':    Util.random_ip(seed, net = '2001:a::/64')[0],
                     'prefix':  Util.random_int(seed, 65, 128),
@@ -1930,7 +1969,7 @@ class IP6Config(ExportedObj):
 
         routes = []
         if seed:
-            for n in range(0, Util.random_int(seed, 4)):
+            for _ in range(Util.random_int(seed, 4)):
                 a = {
                     'dest':     Util.random_ip(seed, net = '2001:a::/64')[0],
                     'prefix':   Util.random_int(seed, 65, 128),
@@ -1941,26 +1980,26 @@ class IP6Config(ExportedObj):
 
         nameservers = []
         if seed:
-            nameservers = list([Util.random_ip(seed, net = '2001:a::/64')[0] for x in range(Util.random_int(seed, 4))])
+            nameservers = [
+                Util.random_ip(seed, net='2001:a::/64')[0]
+                for _ in range(Util.random_int(seed, 4))
+            ]
 
         names_selection = ['foo1.bar', 'foo2.bar', 'foo3.bar', 'foo4.bar', 'fo.o.bar', 'fo.x.y'];
 
         domains = []
         if seed:
-            domains = Util.random_subset(seed, ['dom6.' + s for s in names_selection])
+            domains = Util.random_subset(seed, [f'dom6.{s}' for s in names_selection])
 
         searches = []
         if seed:
-            domains = Util.random_subset(seed, ['sear6.' + s for s in names_selection])
+            domains = Util.random_subset(seed, [f'sear6.{s}' for s in names_selection])
 
         dnsoptions = []
         if seed:
             dnsoptions = Util.random_subset(seed, ['dns6-opt1', 'dns6-opt2', 'dns6-opt3', 'dns6-opt4'])
 
-        dnspriority = 0
-        if seed:
-            dnspriority = Util.random_int(seed, -10000, 10000)
-
+        dnspriority = Util.random_int(seed, -10000, 10000) if seed else 0
         return {
             PRP_IP6_CONFIG_ADDRESSES:   dbus.Array([
                                                 [ Util.ip6_addr_ay(a['addr']),
@@ -1972,7 +2011,7 @@ class IP6Config(ExportedObj):
             PRP_IP6_CONFIG_ADDRESSDATA: dbus.Array([
                                                 dbus.Dictionary(collections.OrderedDict( [ ('address', dbus.String(a['addr'])),
                                                                                            ('prefix',  dbus.UInt32(a['prefix']))] + \
-                                                                                        ([ ('gateway', dbus.String(a['gateway'])) ] if a['gateway'] else [])),
+                                                                                            ([ ('gateway', dbus.String(a['gateway'])) ] if a['gateway'] else [])),
                                                                 'sv')
                                                 for a in addrs
                                             ],
@@ -1989,8 +2028,8 @@ class IP6Config(ExportedObj):
             PRP_IP6_CONFIG_ROUTEDATA:   dbus.Array([
                                                 dbus.Dictionary(collections.OrderedDict( [ ('dest',     dbus.String(a['dest'])),
                                                                                            ('prefix',   dbus.UInt32(a['prefix']))] + \
-                                                                                        ([ ('next-hop', dbus.String(a['next-hop'])) ] if a['next-hop'] else []) + \
-                                                                                        ([ ('metric',   dbus.UInt32(a['metric'])) ] if a['metric'] != -1 else [])),
+                                                                                            ([ ('next-hop', dbus.String(a['next-hop'])) ] if a['next-hop'] else []) + \
+                                                                                            ([ ('metric',   dbus.UInt32(a['metric'])) ] if a['metric'] != -1 else [])),
                                                                 'sv')
                                                 for a in routes
                                             ],
@@ -2031,12 +2070,13 @@ class Dhcp4Config(ExportedObj):
         self.export()
 
     def _props_generate(self, generate_seed):
-        seed = Util.RandomSeed.wrap(generate_seed)
-
-        options = []
-        if seed:
-            options = Util.random_subset(seed, [('dhcp-4-opt-' + str(i), 'val-' + str(i)) for i in range(10)])
-
+        if seed := Util.RandomSeed.wrap(generate_seed):
+            options = Util.random_subset(
+                seed,
+                [(f'dhcp-4-opt-{str(i)}', f'val-{str(i)}') for i in range(10)],
+            )
+        else:
+            options = []
         return {
             PRP_DHCP4_CONFIG_OPTIONS: dbus.Dictionary(collections.OrderedDict(options),
                                                       'sv')
@@ -2071,12 +2111,13 @@ class Dhcp6Config(ExportedObj):
         self.export()
 
     def _props_generate(self, generate_seed):
-        seed = Util.RandomSeed.wrap(generate_seed)
-
-        options = []
-        if seed:
-            options = Util.random_subset(seed, [('dhcp-6-opt-' + str(i), 'val-' + str(i)) for i in range(10)])
-
+        if seed := Util.RandomSeed.wrap(generate_seed):
+            options = Util.random_subset(
+                seed,
+                [(f'dhcp-6-opt-{str(i)}', f'val-{str(i)}') for i in range(10)],
+            )
+        else:
+            options = []
         return {
             PRP_DHCP4_CONFIG_OPTIONS: dbus.Dictionary(collections.OrderedDict(options),
                                                       'sv')
@@ -2164,7 +2205,7 @@ class AgentManager(dbus.service.Object):
                                            dbus_interface=IFACE_AGENT)
                 break
             except dbus.DBusException as e:
-                if e.get_dbus_name() == IFACE_AGENT + '.UserCanceled':
+                if e.get_dbus_name() == f'{IFACE_AGENT}.UserCanceled':
                     raise BusErr.UserCanceledException('User canceled')
                 continue
         return secrets
@@ -2177,10 +2218,7 @@ class ObjectManager(dbus.service.Object):
         self.objs = []
 
     def find_object(self, path):
-        for o in self.objs:
-            if path == o.path:
-                return o
-        return None
+        return next((o for o in self.objs if path == o.path), None)
 
     def add_object(self, obj):
         self.objs.append(obj)
@@ -2202,10 +2240,7 @@ class ObjectManager(dbus.service.Object):
                          in_signature='', out_signature='a{oa{sa{sv}}}',
                          sender_keyword='sender')
     def GetManagedObjects(self, sender=None):
-        managed_objects = {}
-        for obj in self.objs:
-            managed_objects[obj.path] = obj.get_managed_ifaces()
-        return managed_objects
+        return {obj.path: obj.get_managed_ifaces() for obj in self.objs}
 
 ###############################################################################
 

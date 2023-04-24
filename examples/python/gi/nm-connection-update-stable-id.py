@@ -15,8 +15,8 @@ gi.require_version('NM', '1.0')
 from gi.repository import GLib, NM
 
 def usage():
-    print('Usage: %s [[id] <id>]' % (sys.argv[0]))
-    print('       %s [[uuid] <uuid>]' % (sys.argv[0]))
+    print(f'Usage: {sys.argv[0]} [[id] <id>]')
+    print(f'       {sys.argv[0]} [[uuid] <uuid>]')
     return 1
 
 def find_connection(nm_client, arg_type, arg_id):
@@ -37,7 +37,7 @@ def main():
     else:
         arg_type = None
         arg_id = sys.argv[1]
-    arg_log = '%s"%s"' % ((' with %s ' % (arg_type)) if arg_type else '', arg_id)
+    arg_log = f"""{f' with {arg_type} ' if arg_type else ''}"{arg_id}\""""
 
     main_loop = GLib.MainLoop()
 
@@ -45,27 +45,27 @@ def main():
 
     con = find_connection(nm_client, arg_type, arg_id)
     if con is None:
-        print('could not find a connection %s' % (arg_log))
+        print(f'could not find a connection {arg_log}')
         return 1
 
     s_con = con.get_setting_connection()
     if s_con is None:
-        print('connection %s has no [connection] setting' % (arg_log))
+        print(f'connection {arg_log} has no [connection] setting')
         return 1
 
-    arg_log = '"%s" (%s)' % (s_con.get_id(), s_con.get_uuid())
+    arg_log = f'"{s_con.get_id()}" ({s_con.get_uuid()})'
 
     stable_id = s_con.get_stable_id()
     if not stable_id:
-        print('connection %s has no stable-id set' % (arg_log))
+        print(f'connection {arg_log} has no stable-id set')
         return 1
 
     re_match = re.search('\A(.*)-([0-9]+)\Z', stable_id)
-    if not re_match:
-        stable_id = stable_id + '-1'
-    else:
-        stable_id = re_match.group(1) + '-' + str(int(re_match.group(2)) + 1)
-
+    stable_id = (
+        f'{re_match[1]}-{str(int(re_match[2]) + 1)}'
+        if re_match
+        else f'{stable_id}-1'
+    )
     con2 = NM.SimpleConnection.new_clone(con)
     s_con = con2.get_setting_connection()
     s_con.set_property(NM.SETTING_CONNECTION_STABLE_ID, stable_id)
@@ -90,11 +90,11 @@ def main():
     main_loop.run()
 
     if 'error' in result:
-        print('update connection %s failed: %s' % (arg_log, result['error']))
+        print(f"update connection {arg_log} failed: {result['error']}")
         return 1
 
-    print('update connection %s succeeded: %s' % (arg_log, result['result']))
-    print('set stable-id to "%s"' % (stable_id))
+    print(f"update connection {arg_log} succeeded: {result['result']}")
+    print(f'set stable-id to "{stable_id}"')
     return 0
 
 if __name__ == '__main__':

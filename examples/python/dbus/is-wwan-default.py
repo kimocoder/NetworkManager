@@ -75,7 +75,7 @@ for a in active:
     dev_proxy = bus.get_object(NM_SERVICE_NAME, dev_path)
     dev_props = dbus.Interface(dev_proxy, DBUS_PROPS_IFACE)
     devtype = dev_props.Get("org.freedesktop.NetworkManager.Device", "DeviceType")
-    if devtype == NM_DEVICE_TYPE_MODEM or devtype == NM_DEVICE_TYPE_BLUETOOTH:
+    if devtype in [NM_DEVICE_TYPE_MODEM, NM_DEVICE_TYPE_BLUETOOTH]:
         default_is_wwan = True
         break
 
